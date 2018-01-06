@@ -106,3 +106,26 @@ bidirectional IDA
           take some time.  I think this is a strategy that could only be
           used in a fewest moves challenge given how long it will take to
           produce solutions.
+
+
+./usr/bin/rubiks-cube-solver.py
+- test solving centers without staging (no bidir here)
+2018-01-03 00:13:50,302 RubiksCube444.py     INFO: 4x4x4: Start of Phase1
+2018-01-03 00:13:50,304   LookupTable.py     INFO: 4x4x4-step100-ULFRBD-centers-solve-unstaged: IDA threshold range 7->99
+2018-01-03 00:13:50,744   LookupTable.py     INFO: 4x4x4-step100-ULFRBD-centers-solve-unstaged: IDA threshold 7, explored 37 branches, took 439ms
+2018-01-03 00:13:53,218   LookupTable.py     INFO: 4x4x4-step100-ULFRBD-centers-solve-unstaged: IDA threshold 8, explored 527 branches, took 0:00:02.473736
+2018-01-03 00:14:09,617   LookupTable.py     INFO: 4x4x4-step100-ULFRBD-centers-solve-unstaged: IDA threshold 9, explored 15122 branches, took 0:00:16.399350
+2018-01-03 00:18:13,918   LookupTable.py     INFO: 4x4x4-step100-ULFRBD-centers-solve-unstaged: IDA threshold 10, explored 381467 branches, took 0:04:04.300609
+2018-01-03 01:02:29,371   LookupTable.py     INFO: 4x4x4-step100-ULFRBD-centers-solve-unstaged: IDA found match 8 steps in, f_cost 13 (8 + 5)
+2018-01-03 01:02:29,380   LookupTable.py     INFO: 4x4x4-step100-ULFRBD-centers-solve-unstaged: IDA threshold 11, explored 4207868 branches, took 0:44:15.460385 (0:48:39.077432 total)
+2018-01-03 01:02:29,381 RubiksCube444.py     INFO: 4x4x4: End of Phase1, 14 steps in
+
+
+https://alg.cubing.net/?puzzle=4x4x4&setup=B2-_U-_R2-_U_B2-_D-_F2-_D-_L2-_F2-_L_D-_B-_U2-_R-_D_U-_R2-_B_L-_F_Fw_L2-_U-_L_B-_U_L_B2-_Fw-_D2-_R2-_D-_F-_B2-_Rw_F_L2-_U-_F-_L-_U_L_Rw-_D-_R-_B_U2-_B-_Uw-_Bw_U_Bw-_Lw-_Bw_U-_Lw2-_Uw_B2-_R2-_Lw2-_Uw2-_Fw&alg=Fw-_Uw2_Lw2_R2_B2_Uw-_Lw2_U_Bw-_Lw_Bw_U-_Bw-_Uw_B_U2_B-_R_D_Rw_L-_U-_L_F_U_L2_F-_Rw-_B2_F_D_R2_D2_Fw_B2_L-_U-_B_L-_U_L2_Fw-_F-_L_B-_R2_U_D-_R_U2_B_D_L-_F2_L2_D_F2_D_B2_U-_R2_U_B2
+
+Solution: Fw' Uw2 Lw2 R2 B2 Uw' Lw2 U Bw' Lw Bw U' Bw' Uw B U2 B' R D Rw L' U' L F U L2 F' Rw' B2 F D R2 D2 Fw B2 L' U' B L' U L2 Fw' F' L B' R2 U D' R U2 B D L' F2 L2 D F2 D B2 U' R2 U B2
+14 steps to solve centers
+28 steps to group edges
+21 steps to solve 3x3x3
+63 steps total
+

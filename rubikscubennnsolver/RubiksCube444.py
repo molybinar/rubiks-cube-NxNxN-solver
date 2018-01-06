@@ -11,6 +11,7 @@ from rubikscubennnsolver.RubiksCube444Misc import (
     tsai_edge_mapping_combinations,
 )
 from rubikscubennnsolver.LookupTable import (
+    bidir_ida_search,
     get_characters_common_count,
     get_best_entry,
     LookupTable,
@@ -28,6 +29,7 @@ import sys
 
 log = logging.getLogger(__name__)
 
+cube_solved = None
 
 moves_4x4x4 = ("U", "U'", "U2", "Uw", "Uw'", "Uw2",
                "L", "L'", "L2", "Lw", "Lw'", "Lw2",
@@ -36,6 +38,7 @@ moves_4x4x4 = ("U", "U'", "U2", "Uw", "Uw'", "Uw2",
                "B" , "B'", "B2", "Bw", "Bw'", "Bw2",
                "D" , "D'", "D2", "Dw", "Dw'", "Dw2")
 solved_4x4x4 = 'UUUUUUUUUUUUUUUURRRRRRRRRRRRRRRRFFFFFFFFFFFFFFFFDDDDDDDDDDDDDDDDLLLLLLLLLLLLLLLLBBBBBBBBBBBBBBBB'
+
 centers_444 = (6, 7, 10, 11, 22, 23, 26, 27, 38, 39, 42, 43, 54, 55, 58, 59, 70, 71, 74, 75, 86, 87, 90, 91)
 UD_centers_444 = (6, 7, 10, 11, 86, 87, 90, 91)
 LR_centers_444 = (22, 23, 26, 27, 54, 55, 58, 59)
@@ -179,6 +182,212 @@ def get_edges_paired_binary_signature(state):
         result.append('0')
 
     return ''.join(result)
+
+
+'''
+lookup-table-4x4x4-step201-UD-centers-solve.txt
+lookup-table-4x4x4-step202-LR-centers-solve.txt
+lookup-table-4x4x4-step203-FB-centers-solve.txt
+===============================================
+1 steps has 7 entries (0 percent, 0.00x previous step)
+2 steps has 84 entries (0 percent, 12.00x previous step)
+3 steps has 1,118 entries (0 percent, 13.31x previous step)
+4 steps has 14,208 entries (0 percent, 12.71x previous step)
+5 steps has 163,085 entries (0 percent, 11.48x previous step)
+6 steps has 1,586,257 entries (3 percent, 9.73x previous step)
+7 steps has 10,286,840 entries (19 percent, 6.48x previous step)
+8 steps has 26,985,405 entries (52 percent, 2.62x previous step)
+9 steps has 12,258,437 entries (23 percent, 0.45x previous step)
+10 steps has 187,529 entries (0 percent, 0.02x previous step)
+
+Total: 51,482,970 entries
+'''
+class LookupTable444UDCentersSolve(LookupTable):
+
+    def __init__(self, parent):
+        LookupTable.__init__(
+            self,
+            parent,
+            'lookup-table-4x4x4-step201-UD-centers-solve.txt',
+            'UUUUxxxxxxxxxxxxxxxxDDDD',
+            linecount=51482970)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join([parent_state[x] if parent_state[x] in ('U', 'D') else 'x' for x in centers_444])
+        return result
+
+
+class LookupTable444LRCentersSolve(LookupTable):
+
+    def __init__(self, parent):
+        LookupTable.__init__(
+            self,
+            parent,
+            'lookup-table-4x4x4-step202-LR-centers-solve.txt',
+            'xxxxLLLLxxxxRRRRxxxxxxxx',
+            linecount=51482970)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join([parent_state[x] if parent_state[x] in ('L', 'R') else 'x' for x in centers_444])
+        return result
+
+
+class LookupTable444FBCentersSolve(LookupTable):
+
+    def __init__(self, parent):
+        LookupTable.__init__(
+            self,
+            parent,
+            'lookup-table-4x4x4-step203-FB-centers-solve.txt',
+            'xxxxxxxxFFFFxxxxBBBBxxxx',
+            linecount=51482970)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join([parent_state[x] if parent_state[x] in ('F', 'B') else 'x' for x in centers_444])
+        return result
+
+
+class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
+    """
+    lookup-table-4x4x4-step200-ULFRBD-centers-solve-unstaged.txt
+    ============================================================
+    1 steps has 10 entries (0 percent, 0.00x previous step)
+    2 steps has 162 entries (0 percent, 16.20x previous step)
+    3 steps has 2,427 entries (0 percent, 14.98x previous step)
+    4 steps has 35,830 entries (0 percent, 14.76x previous step)
+    5 steps has 527,561 entries (6 percent, 14.72x previous step)
+    6 steps has 7,683,218 entries (93 percent, 14.56x previous step)
+
+    Total: 8,249,208 entries
+    """
+
+    def __init__(self, parent):
+        LookupTableIDA.__init__(
+            self,
+            parent,
+            'lookup-table-4x4x4-step200-ULFRBD-centers-solve-unstaged.txt',
+            'UUUULLLLFFFFRRRRBBBBDDDD',
+            moves_4x4x4,
+
+            # illegal_moves...ignoring these increases the average solution
+            # by less than 1 move but makes the IDA search faster
+            ("Lw", "Lw'", "Lw2",
+             "Bw", "Bw'", "Bw2",
+             "Dw", "Dw'", "Dw2"),
+
+            # prune tables
+            (parent.lt_UD_centers_solve,
+             parent.lt_LR_centers_solve,
+             parent.lt_FB_centers_solve),
+            linecount=8249208)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join([parent_state[x] for x in centers_444])
+        return result
+
+
+class LookupTable444UDCentersScramble(LookupTable):
+
+    def __init__(self, parent):
+        LookupTable.__init__(
+            self,
+            parent,
+            'UD_state.txt',
+            'TBD',
+            linecount=263474,
+            max_depth=5)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join(['1' if parent_state[x] in ('U', 'D') else '0' for x in centers_444])
+
+        # Convert to hex
+        return self.hex_format % int(result, 2)
+
+
+class LookupTable444LRCentersScramble(LookupTable):
+
+    def __init__(self, parent):
+        LookupTable.__init__(
+            self,
+            parent,
+            'LR_state.txt',
+            'TBD',
+            linecount=263823,
+            max_depth=5)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join(['1' if parent_state[x] in ('L', 'R') else '0' for x in centers_444])
+
+        # Convert to hex
+        return self.hex_format % int(result, 2)
+
+
+class LookupTable444FBCentersScramble(LookupTable):
+
+    def __init__(self, parent):
+        LookupTable.__init__(
+            self,
+            parent,
+            'FB_state.txt',
+            'TBD',
+            linecount=216831,
+            max_depth=5)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join(['1' if parent_state[x] in ('F', 'B') else '0' for x in centers_444])
+
+        # Convert to hex
+        return self.hex_format % int(result, 2)
+
+
+class LookupTableIDA444ULFRBDCentersScramble(LookupTableIDA):
+    """
+    lookup-table-4x4x4-step200-ULFRBD-centers-solve-unstaged.txt
+    ============================================================
+    1 steps has 10 entries (0 percent, 0.00x previous step)
+    2 steps has 162 entries (0 percent, 16.20x previous step)
+    3 steps has 2,427 entries (0 percent, 14.98x previous step)
+    4 steps has 35,830 entries (0 percent, 14.76x previous step)
+    5 steps has 527,561 entries (6 percent, 14.72x previous step)
+    6 steps has 7,683,218 entries (93 percent, 14.56x previous step)
+
+    Total: 8,249,208 entries
+    """
+
+    def __init__(self, parent):
+        LookupTableIDA.__init__(
+            self,
+            parent,
+            'lookup-table-4x4x4-step60-tsai-phase2-dummy.txt',
+            'TBD',
+            moves_4x4x4,
+
+            # illegal_moves...ignoring these increases the average solution
+            # by less than 1 move but makes the IDA search faster
+            ("Lw", "Lw'", "Lw2",
+             "Bw", "Bw'", "Bw2",
+             "Dw", "Dw'", "Dw2"),
+
+            # dwalton
+            # prune tables
+            (parent.lt_UD_centers_scramble,
+             parent.lt_LR_centers_scramble,
+             parent.lt_FB_centers_scramble),
+            #(),
+            linecount=0)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join([parent_state[x] for x in centers_444])
+        return result
+
 
 
 '''
@@ -1501,6 +1710,25 @@ class RubiksCube444(RubiksCube):
             # Stage all centers via IDA
             self.lt_ULFRBD_centers_stage = LookupTableIDA444ULFRBDCentersStage(self)
 
+            self.lt_UD_centers_solve = LookupTable444UDCentersSolve(self)
+            self.lt_LR_centers_solve = LookupTable444LRCentersSolve(self)
+            self.lt_FB_centers_solve = LookupTable444FBCentersSolve(self)
+            self.lt_ULFRBD_centers_solve_unstaged = LookupTableIDA444ULFRBDCentersSolveUnstaged(self)
+
+            # dwalton
+            global cube_solved
+            staged_4x4x4 = 'UUUUUUUUUUUUUUUULLLLLLLLLLLLLLLLFFFFFFFFFFFFFFFFUUUUUUUUUUUUUUUULLLLLLLLLLLLLLLLFFFFFFFFFFFFFFFF'
+
+            cube_solved = RubiksCube444(staged_4x4x4, 'URFDLB')
+            cube_solved.nuke_corners()
+            cube_solved.nuke_edges()
+            cube_solved.print_cube()
+            cube_solved.lt_UD_centers_scramble = LookupTable444UDCentersScramble(cube_solved)
+            cube_solved.lt_LR_centers_scramble = LookupTable444LRCentersScramble(cube_solved)
+            cube_solved.lt_FB_centers_scramble = LookupTable444FBCentersScramble(cube_solved)
+            cube_solved.lt_ULFRBD_centers_scramble = LookupTableIDA444ULFRBDCentersScramble(cube_solved)
+            #sys.exit(0)
+
         elif self.cpu_mode == 'tsai':
 
             # Stage LR centers
@@ -1648,6 +1876,27 @@ class RubiksCube444(RubiksCube):
             if self.centers_solved():
                 return
 
+            # Test the prune tables
+            #self.lt_UD_centers_solve.solve()
+            #self.lt_LR_centers_solve.solve()
+            #self.lt_FB_centers_solve.solve()
+            #self.print_cube()
+            #sys.exit(0)
+
+            # dwalton
+            log.info("%s: Start of Phase1" % self)
+            steps = bidir_ida_search(cube_solved.lt_ULFRBD_centers_scramble, self.lt_ULFRBD_centers_stage)
+
+            for step in steps:
+                self.rotate(step)
+
+            #bidir_ida_search(cube_solved.lt_ULFRBD_centers_scramble, self.lt_ULFRBD_centers_solve_unstaged)
+            log.info("%s: End of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
+            self.print_cube()
+            log.info("")
+            sys.exit(0)
+
+            '''
             log.info("%s: Start of Phase1" % self)
             self.lt_ULFRBD_centers_stage.avoid_oll = True
             self.lt_ULFRBD_centers_stage.solve()
@@ -1660,6 +1909,7 @@ class RubiksCube444(RubiksCube):
             self.print_cube()
             log.info("%s: End of Phase2, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
             log.info("")
+            '''
 
         # The tsai will solve the centers and pair the edges
         elif self.cpu_mode == 'tsai':

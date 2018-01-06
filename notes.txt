@@ -1,0 +1,13 @@
+This works a little but needs some more work. I can build 4-deep UD, LR, FB centers staging
+prune tables of a scrambled 4x4x4 cube and use those to IDA search from a solved
+cube back towards the scrambled cube. At the same time you are doing IDA from scrambled
+to solved and when the two trees cross you have a solution.  It does work, the problem
+is you have to build prune tables specific to each cube which kinda sucks.
+
+I tried doing bidir to solve all 4x4x4 centers in one shot but it was taking
+forever, probably becuase I only built centers staging tables 4-deep (for the scrambled
+cube).  I could build centers solving tables all the way but they are 54 million entries
+each and take hours to build.
+
+So for this to be feasible it needs to somehow work without building custom prune tables
+for every scrambled cube.

@@ -13,10 +13,10 @@ from collections import deque
 import logging
 import os
 import sys
+import subprocess
 from rubikscubennnsolver import reverse_steps
 from rubikscubennnsolver.rotate_xxx import rotate_444
 from rubikscubennnsolver.RubiksCube444 import (
-    moves_4x4x4,
     solved_4x4x4,
     RubiksCube444,
     LookupTableIDA444ULFRBDCentersStage,
@@ -24,6 +24,13 @@ from rubikscubennnsolver.RubiksCube444 import (
     LookupTable444LRCentersStage,
     LookupTable444FBCentersStage,
 )
+
+moves_4x4x4 = ("U", "U'", "U2", "Uw", "Uw'", "Uw2",
+               "L", "L'", "L2",
+               "F" , "F'", "F2", "Fw", "Fw'", "Fw2",
+               "R" , "R'", "R2", "Rw", "Rw'", "Rw2",
+               "B" , "B'", "B2",
+               "D" , "D'", "D2")
 
 
 def build_state_table():
@@ -75,9 +82,6 @@ def build_state_table():
 
             log.info("%d UD states, %d LR state, %d FB states, %d on workq" % (UD_count, LR_count, FB_count, len(workq)))
 
-            if UD_count == 735471 and LR_count == 735471 and FB_count == 735471:
-                break
-
         if state in explored:
             continue
         else:
@@ -96,11 +100,18 @@ def build_state_table():
                 FB_explored[FB_state] = ' '.join(reverse_steps(steps))
                 keep_going = True
 
-            if not keep_going:
+            if keep_going:
+
+                if (len(UD_explored) == 735471 and
+                    len(LR_explored) == 735471 and
+                    len(FB_explored) == 735471):
+                    log.warning("Found 735471 states for UD, LR and FB")
+                    break
+            else:
                 continue
 
-            # Only build the table 4-deep for now
-            if len(steps) == 4:
+            # Only build the table 5-deep for now...takes about 1 min
+            if len(steps) == 5:
                 continue
 
             prev_step = steps[-1]
@@ -140,6 +151,9 @@ def build_state_table():
             value = FB_explored[key]
             fh.write("%s:%s\n" % (key, value))
 
+    subprocess.check_output("./utils/pad_lines.py UD_state.txt", shell=True)
+    subprocess.check_output("./utils/pad_lines.py LR_state.txt", shell=True)
+    subprocess.check_output("./utils/pad_lines.py FB_state.txt", shell=True)
     log.info("write end")
 
 

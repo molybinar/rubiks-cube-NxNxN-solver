@@ -101,7 +101,7 @@ class LookupTable(object):
         self.preloaded_cache = False
         self.preloaded_state_set = False
 
-        assert self.filename.startswith('lookup-table'), "We only support lookup-table*.txt files"
+        #assert self.filename.startswith('lookup-table'), "We only support lookup-table*.txt files"
         assert self.filename.endswith('.txt'), "We only support lookup-table*.txt files"
 
         if 'dummy' not in self.filename:
@@ -553,6 +553,9 @@ class LookupTableAStar(LookupTable):
         return cost_to_goal
 
     def search_complete(self, state, steps_to_here):
+        # dwalton
+        return False
+
         steps = self.steps(state)
 
         if not steps:
@@ -831,11 +834,16 @@ class LookupTableIDA(LookupTableAStar):
 
         # If we have already explored the exact same scenario down another branch
         # then we can stop looking down this branch
-        explored_cost_to_here = self.explored.get(lt_state)
+        explored_steps_to_here = self.explored.get(lt_state)
+
+        if explored_steps_to_here is None:
+            explored_cost_to_here = None
+        else:
+            explored_cost_to_here = len(explored_steps_to_here)
 
         if explored_cost_to_here is not None and explored_cost_to_here <= cost_to_here:
             return False
-        self.explored[lt_state] = cost_to_here
+        self.explored[lt_state] = steps_to_here
 
         for step in self.moves_all:
 
@@ -908,3 +916,59 @@ class LookupTableIDA(LookupTableAStar):
         self.parent.solution = self.original_solution[:]
 
         raise NoIDASolution("%s FAILED with range %d->%d" % (self, min_ida_threshold, max_ida_threshold+1))
+
+def bidir_ida_search(lt_solved_cube, lt_scrambled_cube):
+    start_time0 = dt.datetime.now()
+
+    lt_solved_cube._solve()
+
+    if lt_scrambled_cube._solve():
+        return True
+
+    lt_scrambled_cube.explored = {}
+    lt_solved_cube.explored = {}
+
+    for threshold in range(1, 20):
+        log.warning("threshold %d" % threshold)
+
+        lt_scrambled_cube.ida_count = 0
+        lt_scrambled_cube.explored = {}
+        scrambled_steps_to_here = []
+
+        lt_solved_cube.ida_count = 0
+        lt_solved_cube.explored = {}
+        solved_steps_to_here = []
+
+        start_time1 = dt.datetime.now()
+        lt_solved_cube.ida_search(solved_steps_to_here, threshold, None, lt_solved_cube.original_state[:])
+        #log.info("%s: explored %s" % (lt_solved_cube, pformat(lt_solved_cube.explored)))
+        end_time1 = dt.datetime.now()
+        log.info("%s: IDA threshold %d, explored %d branches, %d states in cache, took %s" %
+            (lt_solved_cube, threshold, lt_solved_cube.ida_count, len(lt_solved_cube.explored),
+             pretty_time(end_time1 - start_time1)))
+
+        start_time1 = dt.datetime.now()
+        lt_scrambled_cube.ida_search(scrambled_steps_to_here, threshold, None, lt_scrambled_cube.original_state[:])
+        #log.info("%s: explored %s" % (lt_scrambled_cube, pformat(lt_scrambled_cube.explored)))
+        end_time1 = dt.datetime.now()
+        log.info("%s: IDA threshold %d, explored %d branches, %d states in cache, took %s" %
+            (lt_scrambled_cube, threshold, lt_scrambled_cube.ida_count, len(lt_scrambled_cube.explored),
+             pretty_time(end_time1 - start_time1)))
+
+        # dwalton
+        #log.info("lt_solved_cube.explored: %s" % pformat(lt_solved_cube.explored))
+        #log.info("lt_scrambled_cube.explored: %s" % pformat(lt_scrambled_cube.explored))
+        intersection = lt_solved_cube.explored.keys() & lt_scrambled_cube.explored.keys()
+
+        if intersection:
+            for x in intersection:
+                log.warning("found match at %s, scrambled -> solved %s, solved -> scrambled %s" %
+                    (x, ' '.join(lt_scrambled_cube.explored[x]), ' '.join(lt_solved_cube.explored[x])))
+            
+                steps = lt_scrambled_cube.explored[x] + reverse_steps(lt_solved_cube.explored[x])
+                return steps
+            #sys.exit(0)
+        else:
+            log.info("did not find a match\n")
+
+        #input("PAUSED")
