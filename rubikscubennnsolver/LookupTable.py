@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 
 import datetime as dt
 from pprint import pformat
@@ -16,10 +17,6 @@ import sys
 
 log = logging.getLogger(__name__)
 
-# NOTE: always use list slicing instead of copy for lists
-# See the 3rd post here:
-# https://stackoverflow.com/questions/2612802/how-to-clone-or-copy-a-list
-# For 100k list copy.copy() took 1.488s where slicing took 0.039s...that is a 38x improvement
 
 class ImplementThis(Exception):
     pass
@@ -37,30 +34,133 @@ class NoAStarSolution(Exception):
     pass
 
 
-def get_characters_common_count(strA, strB, str_len):
+def get_characters_common_count(strA, strB, start_index):
+    """
+    This assumes strA and strB are the same length
+    """
     result = 0
 
-    for (index, (charA, charB)) in enumerate(zip(strA, strB)):
-        if charA == charB:
-            result += 1
+    try:
+        for index in range(start_index, len(strA)):
+            if strA[index] == strB[index]:
+                result += 1
+    except IndexError:
+        log.info("strA: %s" % strA)
+        log.info("strB: %s" % strB)
+        log.info("start_index: %s" % start_index)
+        raise
 
     return result
 
 
-def get_best_entry(foo):
-    best_entry = None
-    best_paired_edges = None
-    best_steps_len = None
+def steps_cancel_out(prev_step, step):
+    """
+    >>> steps_cancel_out(None, "U")
+    False
 
-    for (paired_edges, steps_len, state) in foo:
-        if (best_entry is None or
-            paired_edges > best_paired_edges or
-            (paired_edges == best_paired_edges and steps_len < best_steps_len)):
+    >>> steps_cancel_out("U", "U'")
+    True
 
-            best_entry = (paired_edges, steps_len, state)
-            best_paired_edges = paired_edges
-            best_steps_len = steps_len
-    return best_entry
+    >>> steps_cancel_out("U'", "U")
+    True
+
+    >>> steps_cancel_out("U2", "U2")
+    True
+
+    >>> steps_cancel_out("U", "U")
+    False
+    """
+    if prev_step is None:
+        return False
+
+    # U2 followed by U2 is a no-op
+    if step == prev_step and step.endswith("2"):
+        return True
+
+    # U' followed by U is a no-op
+    if prev_step.endswith("'") and not step.endswith("'") and step == prev_step[0:-1]:
+        return True
+
+    # U followed by U' is a no-op
+    if not prev_step.endswith("'") and step.endswith("'") and step[0:-1] == prev_step:
+        return True
+
+    return False
+
+
+def steps_on_same_face_and_layer(prev_step, step):
+    """
+    >>> steps_on_same_face_and_layer(None, "U")
+    False
+
+    >>> steps_on_same_face_and_layer("U", "U")
+    True
+
+    >>> steps_on_same_face_and_layer("U", "U'")
+    True
+
+    >>> steps_on_same_face_and_layer("U", "U2")
+    True
+
+    >>> steps_on_same_face_and_layer("U", "D")
+    False
+
+    >>> steps_on_same_face_and_layer("U", "D'")
+    False
+
+    >>> steps_on_same_face_and_layer("U", "D2")
+    False
+
+    >>> steps_on_same_face_and_layer("U", "Uw")
+    False
+
+    >>> steps_on_same_face_and_layer("3Uw2", "3Uw")
+    True
+
+    >>> steps_on_same_face_and_layer("Uw2", "3Uw")
+    False
+    """
+    if prev_step is None:
+        return False
+
+    # chop the trailing '
+    if prev_step.endswith("'"):
+        prev_step = prev_step[:-1]
+
+    if step.endswith("'"):
+        step = step[:-1]
+
+    # chop the trailing 2
+    if prev_step.endswith("2"):
+        prev_step = prev_step[:-1]
+
+    if step.endswith("2"):
+        step = step[:-1]
+
+    # Note the number of rows being turned and chop it
+    if prev_step[0].isdigit():
+        prev_step_rows_to_rotate = int(prev_step[0])
+        prev_step = prev_step[1:]
+    else:
+        if 'w' in prev_step:
+            prev_step_rows_to_rotate = 2
+        else:
+            prev_step_rows_to_rotate = 1
+
+    if step[0].isdigit():
+        step_rows_to_rotate = int(step[0])
+        step = step[1:]
+    else:
+        if 'w' in step:
+            step_rows_to_rotate = 2
+        else:
+            step_rows_to_rotate = 1
+
+    if prev_step_rows_to_rotate == step_rows_to_rotate:
+        if prev_step == step:
+            return True
+
+    return False
 
 
 def pretty_time(delta):
@@ -95,7 +195,6 @@ class LookupTable(object):
         self.filename_exists = False
         self.linecount = linecount
         self.max_depth = max_depth
-        self.heuristic_stats = {}
         self.avoid_oll = False
         self.avoid_pll = False
         self.preloaded_cache = False
@@ -131,6 +230,22 @@ class LookupTable(object):
                     # remove all of the parts
                     for extension in ('aa', 'ab', 'ac', 'ad'):
                         os.unlink('lookup-table-4x4x4-step71-tsai-phase3-edges.txt.gz.part-%s' % extension)
+
+                elif self.filename_gz == 'lookup-table-4x4x4-step100-edges.txt.gz':
+
+                    # Download all parts
+                    for extension in ('aa', 'ab', 'ac'):
+                        url = "https://github.com/dwalton76/rubiks-cube-lookup-tables-%sx%sx%s/raw/master/lookup-table-4x4x4-step100-edges.txt.gz.part-%s" %\
+                            (self.parent.size, self.parent.size, self.parent.size, extension)
+                        log.info("Downloading table via 'wget %s'" % url)
+                        subprocess.call(['wget', url])
+
+                    # cat them together into a .gz file
+                    subprocess.call('cat lookup-table-4x4x4-step100-edges.txt.gz.part-* > lookup-table-4x4x4-step100-edges.txt.gz', shell=True)
+
+                    # remove all of the parts
+                    for extension in ('aa', 'ab', 'ac'):
+                        os.unlink('lookup-table-4x4x4-step100-edges.txt.gz.part-%s' % extension)
 
                 # =====
                 # 5x5x5
@@ -171,6 +286,24 @@ class LookupTable(object):
                     os.unlink('lookup-table-6x6x6-step60-LFRB-solve-inner-x-center-and-oblique-edges.txt.gz.part-aa')
                     os.unlink('lookup-table-6x6x6-step60-LFRB-solve-inner-x-center-and-oblique-edges.txt.gz.part-ab')
 
+                # =====
+                # 7x7x7
+                # =====
+                elif self.filename_gz == 'lookup-table-7x7x7-step80-LFRB-solve-inner-center-and-oblique-edges.txt.gz':
+
+                    # Download all parts
+                    for extension in ('aa', 'ab', 'ac', 'ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak'):
+                        url = "https://github.com/dwalton76/rubiks-cube-lookup-tables-%sx%sx%s/raw/master/lookup-table-7x7x7-step80-LFRB-solve-inner-center-and-oblique-edges.txt.gz.part-%s" %\
+                            (self.parent.size, self.parent.size, self.parent.size, extension)
+                        log.info("Downloading table via 'wget %s'" % url)
+                        subprocess.call(['wget', url])
+
+                    # cat them together into a .gz file
+                    subprocess.call('cat lookup-table-7x7x7-step80-LFRB-solve-inner-center-and-oblique-edges.txt.gz.part-* > lookup-table-7x7x7-step80-LFRB-solve-inner-center-and-oblique-edges.txt.gz', shell=True)
+
+                    # remove all of the parts
+                    for extension in ('aa', 'ab', 'ac', 'ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak'):
+                        os.unlink('lookup-table-7x7x7-step80-LFRB-solve-inner-center-and-oblique-edges.txt.gz.part-%s' % extension)
                 else:
                     url = "https://github.com/dwalton76/rubiks-cube-lookup-tables-%sx%sx%s/raw/master/%s" % (self.parent.size, self.parent.size, self.parent.size, self.filename_gz)
                     log.info("Downloading table via 'wget %s'" % url)
@@ -344,7 +477,6 @@ class LookupTable(object):
             steps = self.steps(state)
 
             if steps:
-                # dwalton
                 #log.info("%s: PRE solve() state %s found %s" % (self, state, ' '.join(steps)))
                 #self.parent.print_cube()
                 #log.info("%s: %d steps" % (self, len(steps)))
@@ -400,11 +532,17 @@ class LookupTable(object):
 
         with open(self.filename, 'r') as fh:
             for line in fh:
-                signature = line.split('_')[0]
-                signature = int(signature, 2)
 
-                if (signature & signature_to_find) == signature_to_find:
+                # If signature_to_find is 0 we will add every line so no
+                # need to bitwise AND the signatures
+                if signature_to_find == 0:
                     result.append(line.rstrip())
+                else:
+                    signature = line.split('_')[0]
+                    signature = int(signature, 2)
+
+                    if (signature & signature_to_find) == signature_to_find:
+                        result.append(line.rstrip())
 
         return result
 
@@ -487,6 +625,9 @@ class LookupTable(object):
 
         return result
 
+    def state(self):
+        raise Exception("child class must implement state()")
+
 
 class LookupTableAStar(LookupTable):
 
@@ -505,7 +646,6 @@ class LookupTableAStar(LookupTable):
 
     def ida_heuristic(self, use_lt_as_prune=False):
         cost_to_goal = 0
-        #pt_costs = []
 
         if use_lt_as_prune:
             state = self.state()
@@ -520,19 +660,8 @@ class LookupTableAStar(LookupTable):
         for pt in self.prune_tables:
             pt_cost_to_goal = pt.heuristic()
 
-            #if self.heuristic_stats:
-            #    pt_costs.append(pt_cost_to_goal)
-
             if pt_cost_to_goal > cost_to_goal:
                 cost_to_goal = pt_cost_to_goal
-
-        #if self.heuristic_stats:
-        #    pt_costs = tuple(pt_costs)
-        #    len_pt_steps = self.heuristic_stats.get(pt_costs, 0)
-        #
-        #    if len_pt_steps > cost_to_goal:
-        #        log.info("%s: %s increase heuristic from %d to %d" % (self, pformat(pt_costs), cost_to_goal, len_pt_steps))
-        #        cost_to_goal = len_pt_steps
 
         return cost_to_goal
 
@@ -735,20 +864,11 @@ class LookupTableAStar(LookupTable):
                 # ==============
                 for step in self.moves_all:
 
-                    # If this step cancels out the previous step then don't bother with this branch
-                    if prev_step is not None:
+                    #if steps_cancel_out(prev_step, step):
+                    #    continue
 
-                        # U2 followed by U2 is a no-op
-                        if step == prev_step and step.endswith("2"):
-                            continue
-
-                        # U' followed by U is a no-op
-                        if prev_step.endswith("'") and not step.endswith("'") and step == prev_step[0:-1]:
-                            continue
-
-                        # U followed by U' is a no-op
-                        if not prev_step.endswith("'") and step.endswith("'") and step[0:-1] == prev_step:
-                            continue
+                    if steps_on_same_face_and_layer(prev_step, step):
+                        continue
 
                     self.parent.state = self.rotate_xxx(prev_stateA[:], step)
 
@@ -823,20 +943,11 @@ class LookupTableIDA(LookupTableAStar):
 
         for step in self.moves_all:
 
-            # If this step cancels out the previous step then don't bother with this branch
-            if prev_step is not None:
+            #if steps_cancel_out(prev_step, step):
+            #    continue
 
-                # U2 followed by U2 is a no-op
-                if step == prev_step and step.endswith("2"):
-                    continue
-
-                # U' followed by U is a no-op
-                if step == prev_step[0:-1] and prev_step.endswith("'") and not step.endswith("'"):
-                    continue
-
-                # U followed by U' is a no-op
-                if step[0:-1] == prev_step and not prev_step.endswith("'") and step.endswith("'"):
-                    continue
+            if steps_on_same_face_and_layer(prev_step, step):
+                continue
 
             self.parent.state = self.rotate_xxx(prev_state[:], step)
 
@@ -892,3 +1003,515 @@ class LookupTableIDA(LookupTableAStar):
         self.parent.solution = self.original_solution[:]
 
         raise NoIDASolution("%s FAILED with range %d->%d" % (self, min_ida_threshold, max_ida_threshold+1))
+
+stage_first_four_edges_wing_str_combos = (
+    ('BD', 'BL', 'BR', 'BU'),
+    ('BD', 'BL', 'BR', 'DF'),
+    ('BD', 'BL', 'BR', 'DL'),
+    ('BD', 'BL', 'BR', 'DR'),
+    ('BD', 'BL', 'BR', 'FL'),
+    ('BD', 'BL', 'BR', 'FR'),
+    ('BD', 'BL', 'BR', 'FU'),
+    ('BD', 'BL', 'BR', 'LU'),
+    ('BD', 'BL', 'BR', 'RU'),
+    ('BD', 'BL', 'BU', 'DF'),
+    ('BD', 'BL', 'BU', 'DL'),
+    ('BD', 'BL', 'BU', 'DR'),
+    ('BD', 'BL', 'BU', 'FL'),
+    ('BD', 'BL', 'BU', 'FR'),
+    ('BD', 'BL', 'BU', 'FU'),
+    ('BD', 'BL', 'BU', 'LU'),
+    ('BD', 'BL', 'BU', 'RU'),
+    ('BD', 'BL', 'DF', 'DL'),
+    ('BD', 'BL', 'DF', 'DR'),
+    ('BD', 'BL', 'DF', 'FL'),
+    ('BD', 'BL', 'DF', 'FR'),
+    ('BD', 'BL', 'DF', 'FU'),
+    ('BD', 'BL', 'DF', 'LU'),
+    ('BD', 'BL', 'DF', 'RU'),
+    ('BD', 'BL', 'DL', 'DR'),
+    ('BD', 'BL', 'DL', 'FL'),
+    ('BD', 'BL', 'DL', 'FR'),
+    ('BD', 'BL', 'DL', 'FU'),
+    ('BD', 'BL', 'DL', 'LU'),
+    ('BD', 'BL', 'DL', 'RU'),
+    ('BD', 'BL', 'DR', 'FL'),
+    ('BD', 'BL', 'DR', 'FR'),
+    ('BD', 'BL', 'DR', 'FU'),
+    ('BD', 'BL', 'DR', 'LU'),
+    ('BD', 'BL', 'DR', 'RU'),
+    ('BD', 'BL', 'FL', 'FR'),
+    ('BD', 'BL', 'FL', 'FU'),
+    ('BD', 'BL', 'FL', 'LU'),
+    ('BD', 'BL', 'FL', 'RU'),
+    ('BD', 'BL', 'FR', 'FU'),
+    ('BD', 'BL', 'FR', 'LU'),
+    ('BD', 'BL', 'FR', 'RU'),
+    ('BD', 'BL', 'FU', 'LU'),
+    ('BD', 'BL', 'FU', 'RU'),
+    ('BD', 'BL', 'LU', 'RU'),
+    ('BD', 'BR', 'BU', 'DF'),
+    ('BD', 'BR', 'BU', 'DL'),
+    ('BD', 'BR', 'BU', 'DR'),
+    ('BD', 'BR', 'BU', 'FL'),
+    ('BD', 'BR', 'BU', 'FR'),
+    ('BD', 'BR', 'BU', 'FU'),
+    ('BD', 'BR', 'BU', 'LU'),
+    ('BD', 'BR', 'BU', 'RU'),
+    ('BD', 'BR', 'DF', 'DL'),
+    ('BD', 'BR', 'DF', 'DR'),
+    ('BD', 'BR', 'DF', 'FL'),
+    ('BD', 'BR', 'DF', 'FR'),
+    ('BD', 'BR', 'DF', 'FU'),
+    ('BD', 'BR', 'DF', 'LU'),
+    ('BD', 'BR', 'DF', 'RU'),
+    ('BD', 'BR', 'DL', 'DR'),
+    ('BD', 'BR', 'DL', 'FL'),
+    ('BD', 'BR', 'DL', 'FR'),
+    ('BD', 'BR', 'DL', 'FU'),
+    ('BD', 'BR', 'DL', 'LU'),
+    ('BD', 'BR', 'DL', 'RU'),
+    ('BD', 'BR', 'DR', 'FL'),
+    ('BD', 'BR', 'DR', 'FR'),
+    ('BD', 'BR', 'DR', 'FU'),
+    ('BD', 'BR', 'DR', 'LU'),
+    ('BD', 'BR', 'DR', 'RU'),
+    ('BD', 'BR', 'FL', 'FR'),
+    ('BD', 'BR', 'FL', 'FU'),
+    ('BD', 'BR', 'FL', 'LU'),
+    ('BD', 'BR', 'FL', 'RU'),
+    ('BD', 'BR', 'FR', 'FU'),
+    ('BD', 'BR', 'FR', 'LU'),
+    ('BD', 'BR', 'FR', 'RU'),
+    ('BD', 'BR', 'FU', 'LU'),
+    ('BD', 'BR', 'FU', 'RU'),
+    ('BD', 'BR', 'LU', 'RU'),
+    ('BD', 'BU', 'DF', 'DL'),
+    ('BD', 'BU', 'DF', 'DR'),
+    ('BD', 'BU', 'DF', 'FL'),
+    ('BD', 'BU', 'DF', 'FR'),
+    ('BD', 'BU', 'DF', 'FU'),
+    ('BD', 'BU', 'DF', 'LU'),
+    ('BD', 'BU', 'DF', 'RU'),
+    ('BD', 'BU', 'DL', 'DR'),
+    ('BD', 'BU', 'DL', 'FL'),
+    ('BD', 'BU', 'DL', 'FR'),
+    ('BD', 'BU', 'DL', 'FU'),
+    ('BD', 'BU', 'DL', 'LU'),
+    ('BD', 'BU', 'DL', 'RU'),
+    ('BD', 'BU', 'DR', 'FL'),
+    ('BD', 'BU', 'DR', 'FR'),
+    ('BD', 'BU', 'DR', 'FU'),
+    ('BD', 'BU', 'DR', 'LU'),
+    ('BD', 'BU', 'DR', 'RU'),
+    ('BD', 'BU', 'FL', 'FR'),
+    ('BD', 'BU', 'FL', 'FU'),
+    ('BD', 'BU', 'FL', 'LU'),
+    ('BD', 'BU', 'FL', 'RU'),
+    ('BD', 'BU', 'FR', 'FU'),
+    ('BD', 'BU', 'FR', 'LU'),
+    ('BD', 'BU', 'FR', 'RU'),
+    ('BD', 'BU', 'FU', 'LU'),
+    ('BD', 'BU', 'FU', 'RU'),
+    ('BD', 'BU', 'LU', 'RU'),
+    ('BD', 'DF', 'DL', 'DR'),
+    ('BD', 'DF', 'DL', 'FL'),
+    ('BD', 'DF', 'DL', 'FR'),
+    ('BD', 'DF', 'DL', 'FU'),
+    ('BD', 'DF', 'DL', 'LU'),
+    ('BD', 'DF', 'DL', 'RU'),
+    ('BD', 'DF', 'DR', 'FL'),
+    ('BD', 'DF', 'DR', 'FR'),
+    ('BD', 'DF', 'DR', 'FU'),
+    ('BD', 'DF', 'DR', 'LU'),
+    ('BD', 'DF', 'DR', 'RU'),
+    ('BD', 'DF', 'FL', 'FR'),
+    ('BD', 'DF', 'FL', 'FU'),
+    ('BD', 'DF', 'FL', 'LU'),
+    ('BD', 'DF', 'FL', 'RU'),
+    ('BD', 'DF', 'FR', 'FU'),
+    ('BD', 'DF', 'FR', 'LU'),
+    ('BD', 'DF', 'FR', 'RU'),
+    ('BD', 'DF', 'FU', 'LU'),
+    ('BD', 'DF', 'FU', 'RU'),
+    ('BD', 'DF', 'LU', 'RU'),
+    ('BD', 'DL', 'DR', 'FL'),
+    ('BD', 'DL', 'DR', 'FR'),
+    ('BD', 'DL', 'DR', 'FU'),
+    ('BD', 'DL', 'DR', 'LU'),
+    ('BD', 'DL', 'DR', 'RU'),
+    ('BD', 'DL', 'FL', 'FR'),
+    ('BD', 'DL', 'FL', 'FU'),
+    ('BD', 'DL', 'FL', 'LU'),
+    ('BD', 'DL', 'FL', 'RU'),
+    ('BD', 'DL', 'FR', 'FU'),
+    ('BD', 'DL', 'FR', 'LU'),
+    ('BD', 'DL', 'FR', 'RU'),
+    ('BD', 'DL', 'FU', 'LU'),
+    ('BD', 'DL', 'FU', 'RU'),
+    ('BD', 'DL', 'LU', 'RU'),
+    ('BD', 'DR', 'FL', 'FR'),
+    ('BD', 'DR', 'FL', 'FU'),
+    ('BD', 'DR', 'FL', 'LU'),
+    ('BD', 'DR', 'FL', 'RU'),
+    ('BD', 'DR', 'FR', 'FU'),
+    ('BD', 'DR', 'FR', 'LU'),
+    ('BD', 'DR', 'FR', 'RU'),
+    ('BD', 'DR', 'FU', 'LU'),
+    ('BD', 'DR', 'FU', 'RU'),
+    ('BD', 'DR', 'LU', 'RU'),
+    ('BD', 'FL', 'FR', 'FU'),
+    ('BD', 'FL', 'FR', 'LU'),
+    ('BD', 'FL', 'FR', 'RU'),
+    ('BD', 'FL', 'FU', 'LU'),
+    ('BD', 'FL', 'FU', 'RU'),
+    ('BD', 'FL', 'LU', 'RU'),
+    ('BD', 'FR', 'FU', 'LU'),
+    ('BD', 'FR', 'FU', 'RU'),
+    ('BD', 'FR', 'LU', 'RU'),
+    ('BD', 'FU', 'LU', 'RU'),
+    ('BL', 'BR', 'BU', 'DF'),
+    ('BL', 'BR', 'BU', 'DL'),
+    ('BL', 'BR', 'BU', 'DR'),
+    ('BL', 'BR', 'BU', 'FL'),
+    ('BL', 'BR', 'BU', 'FR'),
+    ('BL', 'BR', 'BU', 'FU'),
+    ('BL', 'BR', 'BU', 'LU'),
+    ('BL', 'BR', 'BU', 'RU'),
+    ('BL', 'BR', 'DF', 'DL'),
+    ('BL', 'BR', 'DF', 'DR'),
+    ('BL', 'BR', 'DF', 'FL'),
+    ('BL', 'BR', 'DF', 'FR'),
+    ('BL', 'BR', 'DF', 'FU'),
+    ('BL', 'BR', 'DF', 'LU'),
+    ('BL', 'BR', 'DF', 'RU'),
+    ('BL', 'BR', 'DL', 'DR'),
+    ('BL', 'BR', 'DL', 'FL'),
+    ('BL', 'BR', 'DL', 'FR'),
+    ('BL', 'BR', 'DL', 'FU'),
+    ('BL', 'BR', 'DL', 'LU'),
+    ('BL', 'BR', 'DL', 'RU'),
+    ('BL', 'BR', 'DR', 'FL'),
+    ('BL', 'BR', 'DR', 'FR'),
+    ('BL', 'BR', 'DR', 'FU'),
+    ('BL', 'BR', 'DR', 'LU'),
+    ('BL', 'BR', 'DR', 'RU'),
+    ('BL', 'BR', 'FL', 'FR'),
+    ('BL', 'BR', 'FL', 'FU'),
+    ('BL', 'BR', 'FL', 'LU'),
+    ('BL', 'BR', 'FL', 'RU'),
+    ('BL', 'BR', 'FR', 'FU'),
+    ('BL', 'BR', 'FR', 'LU'),
+    ('BL', 'BR', 'FR', 'RU'),
+    ('BL', 'BR', 'FU', 'LU'),
+    ('BL', 'BR', 'FU', 'RU'),
+    ('BL', 'BR', 'LU', 'RU'),
+    ('BL', 'BU', 'DF', 'DL'),
+    ('BL', 'BU', 'DF', 'DR'),
+    ('BL', 'BU', 'DF', 'FL'),
+    ('BL', 'BU', 'DF', 'FR'),
+    ('BL', 'BU', 'DF', 'FU'),
+    ('BL', 'BU', 'DF', 'LU'),
+    ('BL', 'BU', 'DF', 'RU'),
+    ('BL', 'BU', 'DL', 'DR'),
+    ('BL', 'BU', 'DL', 'FL'),
+    ('BL', 'BU', 'DL', 'FR'),
+    ('BL', 'BU', 'DL', 'FU'),
+    ('BL', 'BU', 'DL', 'LU'),
+    ('BL', 'BU', 'DL', 'RU'),
+    ('BL', 'BU', 'DR', 'FL'),
+    ('BL', 'BU', 'DR', 'FR'),
+    ('BL', 'BU', 'DR', 'FU'),
+    ('BL', 'BU', 'DR', 'LU'),
+    ('BL', 'BU', 'DR', 'RU'),
+    ('BL', 'BU', 'FL', 'FR'),
+    ('BL', 'BU', 'FL', 'FU'),
+    ('BL', 'BU', 'FL', 'LU'),
+    ('BL', 'BU', 'FL', 'RU'),
+    ('BL', 'BU', 'FR', 'FU'),
+    ('BL', 'BU', 'FR', 'LU'),
+    ('BL', 'BU', 'FR', 'RU'),
+    ('BL', 'BU', 'FU', 'LU'),
+    ('BL', 'BU', 'FU', 'RU'),
+    ('BL', 'BU', 'LU', 'RU'),
+    ('BL', 'DF', 'DL', 'DR'),
+    ('BL', 'DF', 'DL', 'FL'),
+    ('BL', 'DF', 'DL', 'FR'),
+    ('BL', 'DF', 'DL', 'FU'),
+    ('BL', 'DF', 'DL', 'LU'),
+    ('BL', 'DF', 'DL', 'RU'),
+    ('BL', 'DF', 'DR', 'FL'),
+    ('BL', 'DF', 'DR', 'FR'),
+    ('BL', 'DF', 'DR', 'FU'),
+    ('BL', 'DF', 'DR', 'LU'),
+    ('BL', 'DF', 'DR', 'RU'),
+    ('BL', 'DF', 'FL', 'FR'),
+    ('BL', 'DF', 'FL', 'FU'),
+    ('BL', 'DF', 'FL', 'LU'),
+    ('BL', 'DF', 'FL', 'RU'),
+    ('BL', 'DF', 'FR', 'FU'),
+    ('BL', 'DF', 'FR', 'LU'),
+    ('BL', 'DF', 'FR', 'RU'),
+    ('BL', 'DF', 'FU', 'LU'),
+    ('BL', 'DF', 'FU', 'RU'),
+    ('BL', 'DF', 'LU', 'RU'),
+    ('BL', 'DL', 'DR', 'FL'),
+    ('BL', 'DL', 'DR', 'FR'),
+    ('BL', 'DL', 'DR', 'FU'),
+    ('BL', 'DL', 'DR', 'LU'),
+    ('BL', 'DL', 'DR', 'RU'),
+    ('BL', 'DL', 'FL', 'FR'),
+    ('BL', 'DL', 'FL', 'FU'),
+    ('BL', 'DL', 'FL', 'LU'),
+    ('BL', 'DL', 'FL', 'RU'),
+    ('BL', 'DL', 'FR', 'FU'),
+    ('BL', 'DL', 'FR', 'LU'),
+    ('BL', 'DL', 'FR', 'RU'),
+    ('BL', 'DL', 'FU', 'LU'),
+    ('BL', 'DL', 'FU', 'RU'),
+    ('BL', 'DL', 'LU', 'RU'),
+    ('BL', 'DR', 'FL', 'FR'),
+    ('BL', 'DR', 'FL', 'FU'),
+    ('BL', 'DR', 'FL', 'LU'),
+    ('BL', 'DR', 'FL', 'RU'),
+    ('BL', 'DR', 'FR', 'FU'),
+    ('BL', 'DR', 'FR', 'LU'),
+    ('BL', 'DR', 'FR', 'RU'),
+    ('BL', 'DR', 'FU', 'LU'),
+    ('BL', 'DR', 'FU', 'RU'),
+    ('BL', 'DR', 'LU', 'RU'),
+    ('BL', 'FL', 'FR', 'FU'),
+    ('BL', 'FL', 'FR', 'LU'),
+    ('BL', 'FL', 'FR', 'RU'),
+    ('BL', 'FL', 'FU', 'LU'),
+    ('BL', 'FL', 'FU', 'RU'),
+    ('BL', 'FL', 'LU', 'RU'),
+    ('BL', 'FR', 'FU', 'LU'),
+    ('BL', 'FR', 'FU', 'RU'),
+    ('BL', 'FR', 'LU', 'RU'),
+    ('BL', 'FU', 'LU', 'RU'),
+    ('BR', 'BU', 'DF', 'DL'),
+    ('BR', 'BU', 'DF', 'DR'),
+    ('BR', 'BU', 'DF', 'FL'),
+    ('BR', 'BU', 'DF', 'FR'),
+    ('BR', 'BU', 'DF', 'FU'),
+    ('BR', 'BU', 'DF', 'LU'),
+    ('BR', 'BU', 'DF', 'RU'),
+    ('BR', 'BU', 'DL', 'DR'),
+    ('BR', 'BU', 'DL', 'FL'),
+    ('BR', 'BU', 'DL', 'FR'),
+    ('BR', 'BU', 'DL', 'FU'),
+    ('BR', 'BU', 'DL', 'LU'),
+    ('BR', 'BU', 'DL', 'RU'),
+    ('BR', 'BU', 'DR', 'FL'),
+    ('BR', 'BU', 'DR', 'FR'),
+    ('BR', 'BU', 'DR', 'FU'),
+    ('BR', 'BU', 'DR', 'LU'),
+    ('BR', 'BU', 'DR', 'RU'),
+    ('BR', 'BU', 'FL', 'FR'),
+    ('BR', 'BU', 'FL', 'FU'),
+    ('BR', 'BU', 'FL', 'LU'),
+    ('BR', 'BU', 'FL', 'RU'),
+    ('BR', 'BU', 'FR', 'FU'),
+    ('BR', 'BU', 'FR', 'LU'),
+    ('BR', 'BU', 'FR', 'RU'),
+    ('BR', 'BU', 'FU', 'LU'),
+    ('BR', 'BU', 'FU', 'RU'),
+    ('BR', 'BU', 'LU', 'RU'),
+    ('BR', 'DF', 'DL', 'DR'),
+    ('BR', 'DF', 'DL', 'FL'),
+    ('BR', 'DF', 'DL', 'FR'),
+    ('BR', 'DF', 'DL', 'FU'),
+    ('BR', 'DF', 'DL', 'LU'),
+    ('BR', 'DF', 'DL', 'RU'),
+    ('BR', 'DF', 'DR', 'FL'),
+    ('BR', 'DF', 'DR', 'FR'),
+    ('BR', 'DF', 'DR', 'FU'),
+    ('BR', 'DF', 'DR', 'LU'),
+    ('BR', 'DF', 'DR', 'RU'),
+    ('BR', 'DF', 'FL', 'FR'),
+    ('BR', 'DF', 'FL', 'FU'),
+    ('BR', 'DF', 'FL', 'LU'),
+    ('BR', 'DF', 'FL', 'RU'),
+    ('BR', 'DF', 'FR', 'FU'),
+    ('BR', 'DF', 'FR', 'LU'),
+    ('BR', 'DF', 'FR', 'RU'),
+    ('BR', 'DF', 'FU', 'LU'),
+    ('BR', 'DF', 'FU', 'RU'),
+    ('BR', 'DF', 'LU', 'RU'),
+    ('BR', 'DL', 'DR', 'FL'),
+    ('BR', 'DL', 'DR', 'FR'),
+    ('BR', 'DL', 'DR', 'FU'),
+    ('BR', 'DL', 'DR', 'LU'),
+    ('BR', 'DL', 'DR', 'RU'),
+    ('BR', 'DL', 'FL', 'FR'),
+    ('BR', 'DL', 'FL', 'FU'),
+    ('BR', 'DL', 'FL', 'LU'),
+    ('BR', 'DL', 'FL', 'RU'),
+    ('BR', 'DL', 'FR', 'FU'),
+    ('BR', 'DL', 'FR', 'LU'),
+    ('BR', 'DL', 'FR', 'RU'),
+    ('BR', 'DL', 'FU', 'LU'),
+    ('BR', 'DL', 'FU', 'RU'),
+    ('BR', 'DL', 'LU', 'RU'),
+    ('BR', 'DR', 'FL', 'FR'),
+    ('BR', 'DR', 'FL', 'FU'),
+    ('BR', 'DR', 'FL', 'LU'),
+    ('BR', 'DR', 'FL', 'RU'),
+    ('BR', 'DR', 'FR', 'FU'),
+    ('BR', 'DR', 'FR', 'LU'),
+    ('BR', 'DR', 'FR', 'RU'),
+    ('BR', 'DR', 'FU', 'LU'),
+    ('BR', 'DR', 'FU', 'RU'),
+    ('BR', 'DR', 'LU', 'RU'),
+    ('BR', 'FL', 'FR', 'FU'),
+    ('BR', 'FL', 'FR', 'LU'),
+    ('BR', 'FL', 'FR', 'RU'),
+    ('BR', 'FL', 'FU', 'LU'),
+    ('BR', 'FL', 'FU', 'RU'),
+    ('BR', 'FL', 'LU', 'RU'),
+    ('BR', 'FR', 'FU', 'LU'),
+    ('BR', 'FR', 'FU', 'RU'),
+    ('BR', 'FR', 'LU', 'RU'),
+    ('BR', 'FU', 'LU', 'RU'),
+    ('BU', 'DF', 'DL', 'DR'),
+    ('BU', 'DF', 'DL', 'FL'),
+    ('BU', 'DF', 'DL', 'FR'),
+    ('BU', 'DF', 'DL', 'FU'),
+    ('BU', 'DF', 'DL', 'LU'),
+    ('BU', 'DF', 'DL', 'RU'),
+    ('BU', 'DF', 'DR', 'FL'),
+    ('BU', 'DF', 'DR', 'FR'),
+    ('BU', 'DF', 'DR', 'FU'),
+    ('BU', 'DF', 'DR', 'LU'),
+    ('BU', 'DF', 'DR', 'RU'),
+    ('BU', 'DF', 'FL', 'FR'),
+    ('BU', 'DF', 'FL', 'FU'),
+    ('BU', 'DF', 'FL', 'LU'),
+    ('BU', 'DF', 'FL', 'RU'),
+    ('BU', 'DF', 'FR', 'FU'),
+    ('BU', 'DF', 'FR', 'LU'),
+    ('BU', 'DF', 'FR', 'RU'),
+    ('BU', 'DF', 'FU', 'LU'),
+    ('BU', 'DF', 'FU', 'RU'),
+    ('BU', 'DF', 'LU', 'RU'),
+    ('BU', 'DL', 'DR', 'FL'),
+    ('BU', 'DL', 'DR', 'FR'),
+    ('BU', 'DL', 'DR', 'FU'),
+    ('BU', 'DL', 'DR', 'LU'),
+    ('BU', 'DL', 'DR', 'RU'),
+    ('BU', 'DL', 'FL', 'FR'),
+    ('BU', 'DL', 'FL', 'FU'),
+    ('BU', 'DL', 'FL', 'LU'),
+    ('BU', 'DL', 'FL', 'RU'),
+    ('BU', 'DL', 'FR', 'FU'),
+    ('BU', 'DL', 'FR', 'LU'),
+    ('BU', 'DL', 'FR', 'RU'),
+    ('BU', 'DL', 'FU', 'LU'),
+    ('BU', 'DL', 'FU', 'RU'),
+    ('BU', 'DL', 'LU', 'RU'),
+    ('BU', 'DR', 'FL', 'FR'),
+    ('BU', 'DR', 'FL', 'FU'),
+    ('BU', 'DR', 'FL', 'LU'),
+    ('BU', 'DR', 'FL', 'RU'),
+    ('BU', 'DR', 'FR', 'FU'),
+    ('BU', 'DR', 'FR', 'LU'),
+    ('BU', 'DR', 'FR', 'RU'),
+    ('BU', 'DR', 'FU', 'LU'),
+    ('BU', 'DR', 'FU', 'RU'),
+    ('BU', 'DR', 'LU', 'RU'),
+    ('BU', 'FL', 'FR', 'FU'),
+    ('BU', 'FL', 'FR', 'LU'),
+    ('BU', 'FL', 'FR', 'RU'),
+    ('BU', 'FL', 'FU', 'LU'),
+    ('BU', 'FL', 'FU', 'RU'),
+    ('BU', 'FL', 'LU', 'RU'),
+    ('BU', 'FR', 'FU', 'LU'),
+    ('BU', 'FR', 'FU', 'RU'),
+    ('BU', 'FR', 'LU', 'RU'),
+    ('BU', 'FU', 'LU', 'RU'),
+    ('DF', 'DL', 'DR', 'FL'),
+    ('DF', 'DL', 'DR', 'FR'),
+    ('DF', 'DL', 'DR', 'FU'),
+    ('DF', 'DL', 'DR', 'LU'),
+    ('DF', 'DL', 'DR', 'RU'),
+    ('DF', 'DL', 'FL', 'FR'),
+    ('DF', 'DL', 'FL', 'FU'),
+    ('DF', 'DL', 'FL', 'LU'),
+    ('DF', 'DL', 'FL', 'RU'),
+    ('DF', 'DL', 'FR', 'FU'),
+    ('DF', 'DL', 'FR', 'LU'),
+    ('DF', 'DL', 'FR', 'RU'),
+    ('DF', 'DL', 'FU', 'LU'),
+    ('DF', 'DL', 'FU', 'RU'),
+    ('DF', 'DL', 'LU', 'RU'),
+    ('DF', 'DR', 'FL', 'FR'),
+    ('DF', 'DR', 'FL', 'FU'),
+    ('DF', 'DR', 'FL', 'LU'),
+    ('DF', 'DR', 'FL', 'RU'),
+    ('DF', 'DR', 'FR', 'FU'),
+    ('DF', 'DR', 'FR', 'LU'),
+    ('DF', 'DR', 'FR', 'RU'),
+    ('DF', 'DR', 'FU', 'LU'),
+    ('DF', 'DR', 'FU', 'RU'),
+    ('DF', 'DR', 'LU', 'RU'),
+    ('DF', 'FL', 'FR', 'FU'),
+    ('DF', 'FL', 'FR', 'LU'),
+    ('DF', 'FL', 'FR', 'RU'),
+    ('DF', 'FL', 'FU', 'LU'),
+    ('DF', 'FL', 'FU', 'RU'),
+    ('DF', 'FL', 'LU', 'RU'),
+    ('DF', 'FR', 'FU', 'LU'),
+    ('DF', 'FR', 'FU', 'RU'),
+    ('DF', 'FR', 'LU', 'RU'),
+    ('DF', 'FU', 'LU', 'RU'),
+    ('DL', 'DR', 'FL', 'FR'),
+    ('DL', 'DR', 'FL', 'FU'),
+    ('DL', 'DR', 'FL', 'LU'),
+    ('DL', 'DR', 'FL', 'RU'),
+    ('DL', 'DR', 'FR', 'FU'),
+    ('DL', 'DR', 'FR', 'LU'),
+    ('DL', 'DR', 'FR', 'RU'),
+    ('DL', 'DR', 'FU', 'LU'),
+    ('DL', 'DR', 'FU', 'RU'),
+    ('DL', 'DR', 'LU', 'RU'),
+    ('DL', 'FL', 'FR', 'FU'),
+    ('DL', 'FL', 'FR', 'LU'),
+    ('DL', 'FL', 'FR', 'RU'),
+    ('DL', 'FL', 'FU', 'LU'),
+    ('DL', 'FL', 'FU', 'RU'),
+    ('DL', 'FL', 'LU', 'RU'),
+    ('DL', 'FR', 'FU', 'LU'),
+    ('DL', 'FR', 'FU', 'RU'),
+    ('DL', 'FR', 'LU', 'RU'),
+    ('DL', 'FU', 'LU', 'RU'),
+    ('DR', 'FL', 'FR', 'FU'),
+    ('DR', 'FL', 'FR', 'LU'),
+    ('DR', 'FL', 'FR', 'RU'),
+    ('DR', 'FL', 'FU', 'LU'),
+    ('DR', 'FL', 'FU', 'RU'),
+    ('DR', 'FL', 'LU', 'RU'),
+    ('DR', 'FR', 'FU', 'LU'),
+    ('DR', 'FR', 'FU', 'RU'),
+    ('DR', 'FR', 'LU', 'RU'),
+    ('DR', 'FU', 'LU', 'RU'),
+    ('FL', 'FR', 'FU', 'LU'),
+    ('FL', 'FR', 'FU', 'RU'),
+    ('FL', 'FR', 'LU', 'RU'),
+    ('FL', 'FU', 'LU', 'RU'),
+    ('FR', 'FU', 'LU', 'RU'),
+)
+
+
+if __name__ == '__main__':
+    import doctest
+
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s %(filename)16s %(levelname)8s: %(message)s')
+    log = logging.getLogger(__name__)
+
+    # Color the errors and warnings in red
+    logging.addLevelName(logging.ERROR, "\033[91m   %s\033[0m" % logging.getLevelName(logging.ERROR))
+    logging.addLevelName(logging.WARNING, "\033[91m %s\033[0m" % logging.getLevelName(logging.WARNING))
+
+    doctest.testmod()
