@@ -4306,3 +4306,13 @@ div#page_holder {
             self.transform_z_prime()
         else:
             raise Exception("Implement target %s" % target)
+
+    def out_of_place_count(self):
+        result = 0
+
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for square_index in range(side.min_pos, side.max_pos + 1):
+                if self.state[square_index] != 'x' and self.state[square_index] != side.name:
+                    result += 1
+
+        return result

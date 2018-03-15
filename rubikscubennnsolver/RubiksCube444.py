@@ -7,7 +7,10 @@ from rubikscubennnsolver.LookupTable import (
     LookupTable,
     LookupTableIDA,
 )
+from pprint import pformat
 import logging
+import pickle
+import sys
 
 log = logging.getLogger(__name__)
 
@@ -352,6 +355,551 @@ class LookupTableIDA444ULFRBDCentersStage(LookupTableIDA):
         return result
 
 
+"""
+lookup-table-4x4x4-step201-UD-centers-solve-unstaged.txt
+lookup-table-4x4x4-step202-LR-centers-solve-unstaged.txt
+lookup-table-4x4x4-step203-FB-centers-solve-unstaged.txt
+========================================================
+1 steps has 13 entries (0 percent, 0.00x previous step)
+2 steps has 205 entries (0 percent, 15.77x previous step)
+3 steps has 3526 entries (0 percent, 17.20x previous step)
+4 steps has 53778 entries (0 percent, 15.25x previous step)
+5 steps has 691972 entries (1 percent, 12.87x previous step)
+6 steps has 6685690 entries (12 percent, 9.66x previous step)
+7 steps has 28771914 entries (55 percent, 4.30x previous step)
+8 steps has 15187532 entries (29 percent, 0.53x previous step)
+9 steps has 88340 entries (0 percent, 0.01x previous step)
+
+Total: 51482970 entries
+Average: 7.138260 moves
+"""
+class LookupTable444UDCentersSolveUnstaged(LookupTable):
+
+    def __init__(self, parent):
+
+        LookupTable.__init__(
+            self,
+            parent,
+            'lookup-table-4x4x4-step201-UD-centers-solve-unstaged.txt',
+            'UUUUxxxxxxxxxxxxxxxxDDDD',
+            linecount=51482970,
+            max_depth=9)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join([parent_state[x] if parent_state[x] in ('U', 'D') else 'x' for x in centers_444])
+        return result
+
+
+class LookupTable444LRCentersSolveUnstaged(LookupTable):
+
+    def __init__(self, parent):
+        LookupTable.__init__(
+            self,
+            parent,
+            'lookup-table-4x4x4-step202-LR-centers-solve-unstaged.txt',
+            'xxxxLLLLxxxxRRRRxxxxxxxx',
+            linecount=51482970,
+            max_depth=9)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join([parent_state[x] if parent_state[x] in ('L', 'R') else 'x' for x in centers_444])
+        return result
+
+
+class LookupTable444FBCentersSolveUnstaged(LookupTable):
+
+    def __init__(self, parent):
+        LookupTable.__init__(
+            self,
+            parent,
+            'lookup-table-4x4x4-step203-FB-centers-solve-unstaged.txt',
+            'xxxxxxFFFFxxxxBBBBxxxxxx',
+            linecount=51482970,
+            max_depth=9)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join([parent_state[x] if parent_state[x] in ('F', 'B') else 'x' for x in centers_444])
+        return result
+
+
+class LookupTable444UFCentersSolveUnstaged(LookupTable):
+    """
+    lookup-table-4x4x4-step204-UF-centers-solve-unstaged.txt
+    ========================================================
+    1 steps has 19 entries (0 percent, 0.00x previous step)
+    2 steps has 355 entries (0 percent, 18.68x previous step)
+    3 steps has 6716 entries (0 percent, 18.92x previous step)
+    4 steps has 117206 entries (0 percent, 17.45x previous step)
+    5 steps has 1756793 entries (3 percent, 14.99x previous step)
+    6 steps has 17189829 entries (33 percent, 9.78x previous step)
+    7 steps has 31431550 entries (61 percent, 1.83x previous step)
+    8 steps has 980502 entries (1 percent, 0.03x previous step)
+
+    Total: 51482970 entries
+    Average: 6.609516 moves
+    """
+
+    def __init__(self, parent):
+        LookupTable.__init__(
+            self,
+            parent,
+            'lookup-table-4x4x4-step204-UF-centers-solve-unstaged.txt',
+            'UUUUxxxxFFFFxxxxxxxxxxxx',
+            linecount=51482970,
+            max_depth=8)
+
+    def __str__(self):
+        return self.__class__.__name__
+
+    def steps_cost(self, state_to_find=None):
+
+        if state_to_find is None:
+            state_to_find = self.state()
+
+        steps = self.steps(state_to_find)
+
+        if steps is None:
+            #log.info("%s: steps_cost None for %s (stage_target)" % (self, state_to_find))
+            return 0
+        else:
+            if steps[0].isdigit():
+                return int(steps[0])
+            else:
+                #log.info("%s: steps_cost %d for %s (%s)" % (self, len(steps), state_to_find, ' '.join(steps)))
+                # dwalton
+                return self.parent.get_solution_len_minus_rotates(steps)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join([parent_state[x] if parent_state[x] in ('U', 'F') else 'x' for x in centers_444])
+        return result
+
+
+class LookupTable444ULCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged):
+
+    def state(self):
+        """
+        - rotate cube y'
+        - x out everything but U and L
+        - change Ls to Fs
+        """
+        parent_state = self.parent.state
+        tmp_state = parent_state[:]
+        tmp_solution = self.parent.solution[:]
+
+        # dwalton these cube rotates are being counted as part of the cost
+
+        self.parent.rotate("y'")
+        #for square_index in range(1, self.parent.sideD.max_pos + 1):
+        for square_index in centers_444:
+            if parent_state[square_index] == 'U':
+                pass
+            elif parent_state[square_index] == 'L':
+                parent_state[square_index] = 'F'
+            else:
+                parent_state[square_index] = 'x'
+
+        #result = ''.join([parent_state[x] if parent_state[x] in ('U', 'F') else 'x' for x in centers_444])
+        result = ''.join([parent_state[x] for x in centers_444])
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
+        #log.info("%s: return %s" % (self, result))
+        return result
+
+
+class LookupTable444URCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged):
+
+    def state(self):
+        """
+        - rotate cube y
+        - x out everything but U and R
+        - change Ls to Fs
+        """
+        parent_state = self.parent.state
+        tmp_state = parent_state[:]
+        tmp_solution = self.parent.solution[:]
+
+        self.parent.rotate("y")
+        #for square_index in range(1, self.parent.sideD.max_pos + 1):
+        for square_index in centers_444:
+            if parent_state[square_index] == 'U':
+                pass
+            elif parent_state[square_index] == 'R':
+                parent_state[square_index] = 'F'
+            else:
+                parent_state[square_index] = 'x'
+
+        #result = ''.join([parent_state[x] if parent_state[x] in ('U', 'F') else 'x' for x in centers_444])
+        result = ''.join([parent_state[x] for x in centers_444])
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
+        return result
+
+
+class LookupTable444UBCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged):
+
+    def state(self):
+        """
+        - rotate cube y2
+        - x out everything but U and R
+        - change Ls to Fs
+        """
+        parent_state = self.parent.state
+        tmp_state = parent_state[:]
+        tmp_solution = self.parent.solution[:]
+
+        self.parent.rotate("y")
+        self.parent.rotate("y")
+
+        for square_index in centers_444:
+            if parent_state[square_index] == 'U':
+                pass
+            elif parent_state[square_index] == 'B':
+                parent_state[square_index] = 'F'
+            else:
+                parent_state[square_index] = 'x'
+
+        result = ''.join([parent_state[x] for x in centers_444])
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
+        return result
+
+
+class LookupTable444LFCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged):
+
+    def state(self):
+        parent_state = self.parent.state
+        tmp_state = parent_state[:]
+        tmp_solution = self.parent.solution[:]
+
+        self.parent.rotate("z")
+
+        for square_index in centers_444:
+            if parent_state[square_index] == 'L':
+                parent_state[square_index] = 'U'
+            elif parent_state[square_index] == 'F':
+                pass
+            else:
+                parent_state[square_index] = 'x'
+
+        result = ''.join([parent_state[x] for x in centers_444])
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
+        return result
+
+
+class LookupTable444LBCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged):
+
+    def state(self):
+        parent_state = self.parent.state
+        tmp_state = parent_state[:]
+        tmp_solution = self.parent.solution[:]
+
+        self.parent.rotate("z")
+        self.parent.rotate("y")
+        self.parent.rotate("y")
+
+        for square_index in centers_444:
+            if parent_state[square_index] == 'L':
+                parent_state[square_index] = 'U'
+            elif parent_state[square_index] == 'B':
+                parent_state[square_index] = 'F'
+            else:
+                parent_state[square_index] = 'x'
+
+        result = ''.join([parent_state[x] for x in centers_444])
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
+        return result
+
+
+class LookupTable444LDCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged):
+
+    def state(self):
+        parent_state = self.parent.state
+        tmp_state = parent_state[:]
+        tmp_solution = self.parent.solution[:]
+
+        self.parent.rotate("z")
+        self.parent.rotate("y'")
+
+        for square_index in centers_444:
+            if parent_state[square_index] == 'L':
+                parent_state[square_index] = 'U'
+            elif parent_state[square_index] == 'D':
+                parent_state[square_index] = 'F'
+            else:
+                parent_state[square_index] = 'x'
+
+        result = ''.join([parent_state[x] for x in centers_444])
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
+        return result
+
+
+class LookupTable444FRCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged):
+
+    def state(self):
+        parent_state = self.parent.state
+        tmp_state = parent_state[:]
+        tmp_solution = self.parent.solution[:]
+
+        self.parent.rotate("z'")
+
+        for square_index in centers_444:
+            if parent_state[square_index] == 'R':
+                parent_state[square_index] = 'U'
+            elif parent_state[square_index] == 'F':
+                parent_state[square_index] = 'F'
+            else:
+                parent_state[square_index] = 'x'
+
+        result = ''.join([parent_state[x] for x in centers_444])
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
+        return result
+
+
+class LookupTable444FDCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged):
+
+    def state(self):
+        parent_state = self.parent.state
+        tmp_state = parent_state[:]
+        tmp_solution = self.parent.solution[:]
+
+        self.parent.rotate("z")
+        self.parent.rotate("z")
+
+        for square_index in centers_444:
+            if parent_state[square_index] == 'D':
+                parent_state[square_index] = 'U'
+            elif parent_state[square_index] == 'F':
+                parent_state[square_index] = 'F'
+            else:
+                parent_state[square_index] = 'x'
+
+        result = ''.join([parent_state[x] for x in centers_444])
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
+        return result
+
+
+class LookupTable444RBCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged):
+
+    def state(self):
+        parent_state = self.parent.state
+        tmp_state = parent_state[:]
+        tmp_solution = self.parent.solution[:]
+
+        self.parent.rotate("z'")
+        self.parent.rotate("y")
+        self.parent.rotate("y")
+
+        for square_index in centers_444:
+            if parent_state[square_index] == 'R':
+                parent_state[square_index] = 'U'
+            elif parent_state[square_index] == 'B':
+                parent_state[square_index] = 'F'
+            else:
+                parent_state[square_index] = 'x'
+
+        result = ''.join([parent_state[x] for x in centers_444])
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
+        return result
+
+
+class LookupTable444RDCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged):
+
+    def state(self):
+        parent_state = self.parent.state
+        tmp_state = parent_state[:]
+        tmp_solution = self.parent.solution[:]
+
+        self.parent.rotate("z'")
+        self.parent.rotate("y")
+
+        for square_index in centers_444:
+            if parent_state[square_index] == 'R':
+                parent_state[square_index] = 'U'
+            elif parent_state[square_index] == 'D':
+                parent_state[square_index] = 'F'
+            else:
+                parent_state[square_index] = 'x'
+
+        result = ''.join([parent_state[x] for x in centers_444])
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
+        return result
+
+
+class LookupTable444BDCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged):
+
+    def state(self):
+        parent_state = self.parent.state
+        tmp_state = parent_state[:]
+        tmp_solution = self.parent.solution[:]
+
+        self.parent.rotate("z")
+        self.parent.rotate("z")
+        self.parent.rotate("y")
+        self.parent.rotate("y")
+
+        for square_index in centers_444:
+            if parent_state[square_index] == 'D':
+                parent_state[square_index] = 'U'
+            elif parent_state[square_index] == 'B':
+                parent_state[square_index] = 'F'
+            else:
+                parent_state[square_index] = 'x'
+
+        result = ''.join([parent_state[x] for x in centers_444])
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
+        return result
+
+
+class NeuralNetwork444CentersSolveUnstaged(object):
+
+    def __init__(self, filename, parent):
+        self.filename = filename
+        self.nn = pickle.load(open(self.filename, 'rb'))
+        self.parent = parent
+        self.max_depth = 99
+
+    def __str__(self):
+        return self.__class__.__name__
+
+    #def steps_cost(self):
+    def heuristic(self):
+        UD_cost = self.parent.lt_UD_centers_solve_unstaged.steps_cost()
+        LR_cost = self.parent.lt_LR_centers_solve_unstaged.steps_cost()
+        FB_cost = self.parent.lt_FB_centers_solve_unstaged.steps_cost()
+
+        UF_cost = self.parent.lt_UF_centers_solve_unstaged.steps_cost()
+        UL_cost = self.parent.lt_UL_centers_solve_unstaged.steps_cost()
+        UR_cost = self.parent.lt_UR_centers_solve_unstaged.steps_cost()
+        UB_cost = self.parent.lt_UB_centers_solve_unstaged.steps_cost()
+
+        LF_cost = self.parent.lt_LF_centers_solve_unstaged.steps_cost()
+        LB_cost = self.parent.lt_LB_centers_solve_unstaged.steps_cost()
+        LD_cost = self.parent.lt_LD_centers_solve_unstaged.steps_cost()
+
+        FR_cost = self.parent.lt_FR_centers_solve_unstaged.steps_cost()
+        FD_cost = self.parent.lt_FD_centers_solve_unstaged.steps_cost()
+
+        RB_cost = self.parent.lt_RB_centers_solve_unstaged.steps_cost()
+        RD_cost = self.parent.lt_RD_centers_solve_unstaged.steps_cost()
+
+        BD_cost = self.parent.lt_BD_centers_solve_unstaged.steps_cost()
+
+        out_of_place_count = self.parent.center_out_of_place_count()
+        out_of_place_cost = out_of_place_count / 8 
+
+        center_pairs_count = self.parent.center_pairs_count()
+        center_unpaired_count = 24 - center_pairs_count
+        center_unpaired_cost = center_unpaired_count / 8 
+
+        #inputs = [[UD_cost, LR_cost, FB_cost, UF_cost, out_of_place_cost, center_unpaired_cost]]
+        inputs = [[UD_cost, LR_cost, FB_cost,
+                   UF_cost, UL_cost, UR_cost, UB_cost,
+                   LF_cost, LB_cost, LD_cost,
+                   FR_cost, FD_cost,
+                   RB_cost, RD_cost,
+                   BD_cost,
+                   out_of_place_cost, center_unpaired_cost]]
+
+        nn_cost = int(self.nn.predict(inputs)[0])
+
+        #result = max(UD_cost, LR_cost, FB_cost, UF_cost, out_of_place_cost, center_unpaired_cost, nn_cost)
+        result = max(UD_cost, LR_cost, FB_cost,
+                     UF_cost, UL_cost, UR_cost, UB_cost,
+                     LF_cost, LB_cost, LD_cost,
+                     FR_cost, FD_cost,
+                     RB_cost, RD_cost,
+                     BD_cost,
+                     out_of_place_cost, center_unpaired_cost, nn_cost)
+        # dwalton
+        self.parent.print_cube()
+        log.info("%s: inputs %s, nn_cost %s, result %s" % (self, pformat(inputs), nn_cost, result))
+        sys.exit(0)
+        return result
+
+
+class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
+    """
+    lookup-table-4x4x4-step200-ULFRBD-centers-solve-unstaged.txt
+    ============================================================
+    1 steps has 19 entries (0 percent, 0.00x previous step)
+    2 steps has 459 entries (0 percent, 24.16x previous step)
+    3 steps has 10272 entries (0 percent, 22.38x previous step)
+    4 steps has 218195 entries (0 percent, 21.24x previous step)
+    5 steps has 4384602 entries (4 percent, 20.09x previous step)
+    6 steps has 83113883 entries (94 percent, 18.96x previous step)
+
+    Total: 87727430 entries
+    Average: 5.944673 moves
+
+
+    24!/(4!*4!*4!*4!*4!*4!) is 3,246,670,537,000,000
+    If the number of entries expands by 18.96 each time (it won't
+    but this gives us a rough guess of the distribution) we are
+    looking at:
+
+    7 steps 1,575,839,221 (1,663,566,651 total)
+    8 steps 29,877,911,630 (31,541,478,281 total)
+    9 steps 566,485,204,504 (598,026,682,785 total)
+    10 steps 10,740,559,480,000 (11,338,586,160,000 total)
+    11 steps 203,641,007,700,000 (214,381,567,200,000 total)
+    12 steps 3,861,033,506,000,000
+
+    """
+
+    def __init__(self, parent):
+        '''
+            (parent.lt_UD_centers_solve_unstaged,
+             parent.lt_LR_centers_solve_unstaged,
+             parent.lt_FB_centers_solve_unstaged,
+             #parent.lt_UF_centers_solve_unstaged,
+             #parent.lt_UL_centers_solve_unstaged,
+             #parent.lt_UR_centers_solve_unstaged,
+             #parent.lt_UB_centers_solve_unstaged,
+
+             #parent.lt_LF_centers_solve_unstaged,
+             #parent.lt_LB_centers_solve_unstaged,
+             #parent.lt_LD_centers_solve_unstaged,
+             #parent.lt_FR_centers_solve_unstaged,
+             #parent.lt_FD_centers_solve_unstaged,
+
+             #parent.lt_RB_centers_solve_unstaged,
+             #parent.lt_RD_centers_solve_unstaged,
+             #parent.lt_BD_centers_solve_unstaged,
+            ),
+        '''
+
+        LookupTableIDA.__init__(
+            self,
+            parent,
+            'lookup-table-4x4x4-step200-ULFRBD-centers-solve-unstaged.txt',
+            'UUUULLLLFFFFRRRRBBBBDDDD',
+            moves_4x4x4,
+            (), # illegal moves
+
+            # prune tables
+            #(parent.nn_centers_solve_unstaged,),
+            (),
+            linecount=87727430,
+            max_depth=6)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = ''.join([parent_state[x] for x in centers_444])
+        return result
+
+
 class LookupTable444ULFRBDCentersSolve(LookupTable):
     """
     lookup-table-4x4x4-step30-ULFRBD-centers-solve.txt
@@ -470,7 +1018,8 @@ class LookupTable444ULFRBDCentersSolveEdgesStage(LookupTableIDA):
 
             # prune tables
             (parent.lt_ULFRBD_centers_solve,),
-            linecount=0)
+            linecount=0,
+            max_depth=99)
 
     def state(self):
         state = edges_recolor_pattern_444(self.parent.state[:])
@@ -678,6 +1227,40 @@ class RubiksCube444(RubiksCube):
             return
         self.lt_init_called = True
 
+        # experiment
+        #self.nn_centers_solve_unstaged = NeuralNetwork444CentersSolveUnstaged('nn-centers-444.pkl', self)
+        self.lt_UD_centers_solve_unstaged = LookupTable444UDCentersSolveUnstaged(self)
+        self.lt_LR_centers_solve_unstaged = LookupTable444LRCentersSolveUnstaged(self)
+        self.lt_FB_centers_solve_unstaged = LookupTable444FBCentersSolveUnstaged(self)
+
+        # build these prune tables via the UF table
+        # - UL, UF, UR, UB
+        # - LF, LB, LD
+        # - FR, FD
+        # - RB, RD
+        # - BD
+        self.lt_UF_centers_solve_unstaged = LookupTable444UFCentersSolveUnstaged(self)
+        self.lt_UL_centers_solve_unstaged = LookupTable444ULCentersSolveUnstaged(self)
+        self.lt_UR_centers_solve_unstaged = LookupTable444URCentersSolveUnstaged(self)
+        self.lt_UB_centers_solve_unstaged = LookupTable444UBCentersSolveUnstaged(self)
+
+        # dwalton
+        self.lt_LF_centers_solve_unstaged = LookupTable444LFCentersSolveUnstaged(self)
+        self.lt_LB_centers_solve_unstaged = LookupTable444LBCentersSolveUnstaged(self)
+        self.lt_LD_centers_solve_unstaged = LookupTable444LDCentersSolveUnstaged(self)
+
+        self.lt_FR_centers_solve_unstaged = LookupTable444FRCentersSolveUnstaged(self)
+        self.lt_FD_centers_solve_unstaged = LookupTable444FDCentersSolveUnstaged(self)
+
+        self.lt_RB_centers_solve_unstaged = LookupTable444RBCentersSolveUnstaged(self)
+        self.lt_RD_centers_solve_unstaged = LookupTable444RDCentersSolveUnstaged(self)
+
+        self.lt_BD_centers_solve_unstaged = LookupTable444BDCentersSolveUnstaged(self)
+
+
+        self.lt_ULFRBD_centers_solve_unstaged = LookupTableIDA444ULFRBDCentersSolveUnstaged(self)
+        #self.lt_ULFRBD_centers_solve_unstaged.avoid_oll = True
+
         # ==============
         # Phase 1 tables
         # ==============
@@ -706,6 +1289,14 @@ class RubiksCube444(RubiksCube):
         # If the centers are already solved then return and let group_edges() pair the edges
         if self.centers_solved():
             return
+
+        log.info("%s: Start of Phase1" % self)
+        #self.lt_ULFRBD_centers_solve_unstaged.ida_all_the_way = True
+        self.lt_ULFRBD_centers_solve_unstaged.solve()
+        self.print_cube()
+        log.info("%s: End of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
+        return
+        sys.exit(0)
 
         # Stage all centers then solve all centers...averages 18.12 moves
         log.info("%s: Start of Phase1" % self)
@@ -997,6 +1588,55 @@ class RubiksCube444(RubiksCube):
 
         log.info("%s: edges paired, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         self.solution.append('EDGES_GROUPED')
+
+    def center_out_of_place_count(self):
+        result = 0
+
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for square_index in side.center_pos:
+                if self.state[square_index] != 'x' and self.state[square_index] != side.name:
+                    result += 1 
+
+        return result
+
+    def center_pairs_count(self):
+        result = 0
+
+        for (x, y) in (
+            (6, 7),
+            (10, 11),
+            (6, 10),
+            (7, 11),
+
+            (22, 23),
+            (26, 27),
+            (22, 26),
+            (23, 27),
+
+            (38, 39),
+            (42, 43),
+            (38, 42),
+            (39, 43),
+
+            (54, 55),
+            (58, 59),
+            (54, 58),
+            (55, 59),
+
+            (70, 71),
+            (74, 75),
+            (70, 74),
+            (71, 75),
+
+            (86, 87),
+            (90, 91),
+            (86, 90),
+            (87, 91)):
+
+            if self.state[x] == self.state[y] and self.state[x] != 'x':
+                result += 1
+
+        return result
 
 
 def rotate_444_U(cube):

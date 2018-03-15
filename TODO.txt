@@ -1,0 +1,133 @@
+
+- build these prune tables for solving all 4x centers at once
+    - UD, UL, UF, UR, UB
+    - LF, LR, LB, LD
+    - FR, FB, FD
+    - RB, RD
+    - BD
+    - That is 15 prune tables...is that too many?
+
+- implement these 5 heuristics
+
+    errors: Number of stickers that are not on the correct face. This number is
+        then divided by 12 so that the resulting heuristic is admissible. (It is
+        possible to move 12 stickers in a single move.)
+
+    # For 4x centers we would divide by 8...so the max the heuristic can ever
+    # return is 3...I doubt this will be that useful
+
+
+    distance: The same as previous but stickers that need
+        to go to the opposite face count as two because they
+        require at least two moves to be placed correctly. The
+        number is then also divided in order to be admissible.
+
+    # This is because they were only using quarter turns, with half turns
+    # you only need the 'errors' heuristic
+
+
+    pairs-different: The total number of neighbouring
+        pairs of stickers that are not in correct place. Neighbouring
+        pair consists of two stickers on the same
+        face that are next to each other (i.e. touching by an
+        edge). Among all neighbouring pairs, we count those
+        in which the two stickers have different colors. The
+        number is then again normalized so that the estimate
+        is admissible.
+
+    # If we ignore the diagonals on a center (I think we should) there are
+    # four "pairs" per side so 24 pairs total.  At most 2 could be paired
+    # per side via a turn so divide by 8.
+
+    face-different: The same as before but we consider
+        every two stickers that are on the same face as a pair
+        even if they are not next to each other.
+
+    # For 4x centers they are all "next" to each other so we just need
+    # pairs-different.
+
+    face-error: This only considers one specific face and
+        counts how well it is completed
+
+The mentioned heuristics may look very similar but they
+actually work differently. For example, if we use the
+heuristics pairs-different and face-different to search for
+a solution of 8x8x8 cube, we get a very different kinds
+of states. Figures 1 and 2 show two states where the
+two heuristics got stuck respectively. The pairs-different
+heuristic (figure 1) created a number of connected components
+of the same color on each face, while face-different
+(figure 2) maximized the total number of colored stickers
+that are together on each face but it didn’t create any coherent
+patterns.
+
+
+
+10k training cubes
+==================
+CART: 0.306775 (0.004696)
+
+             precision    recall  f1-score   support
+
+        7.0       0.70      0.70      0.70      1998
+        8.0       0.30      0.32      0.31       880
+        9.0       0.24      0.26      0.25       839
+       10.0       0.22      0.21      0.21       825
+       11.0       0.18      0.18      0.18       773
+       12.0       0.20      0.19      0.19       718
+       13.0       0.19      0.18      0.19       671
+       14.0       0.16      0.17      0.16       544
+       15.0       0.18      0.16      0.17       523
+       16.0       0.17      0.15      0.16       443
+       17.0       0.13      0.12      0.12       373
+       18.0       0.16      0.17      0.16       328
+
+avg / total       0.31      0.32      0.31      8915
+
+
+
+20k training cubes
+==================
+RT: 0.385238 (0.004821)
+
+             precision    recall  f1-score   support
+
+        7.0       0.77      0.78      0.77      3855
+        8.0       0.37      0.37      0.37      1523
+        9.0       0.29      0.29      0.29      1343
+       10.0       0.26      0.26      0.26      1273
+       11.0       0.23      0.22      0.22      1167
+       12.0       0.21      0.24      0.22      1010
+       13.0       0.20      0.19      0.20       951
+       14.0       0.17      0.18      0.17       786
+       15.0       0.15      0.14      0.15       689
+       16.0       0.15      0.16      0.15       582
+       17.0       0.13      0.12      0.12       504
+       18.0       0.12      0.13      0.13       418
+
+avg / total       0.38      0.38      0.38     14101
+
+
+
+30k training cubes
+==================
+CART: 0.600931 (0.002602)
+
+             precision    recall  f1-score   support
+
+        7.0       0.91      0.92      0.91     19923
+        8.0       0.49      0.49      0.49      3711
+        9.0       0.38      0.38      0.38      3022
+       10.0       0.34      0.34      0.34      2592
+       11.0       0.29      0.28      0.29      2321
+       12.0       0.26      0.26      0.26      1978
+       13.0       0.22      0.22      0.22      1620
+       14.0       0.21      0.20      0.20      1381
+       15.0       0.19      0.18      0.18      1193
+       16.0       0.16      0.16      0.16       990
+       17.0       0.15      0.15      0.15       823
+       18.0       0.13      0.14      0.13       679
+
+avg / total       0.61      0.61      0.61     40233
+
+
