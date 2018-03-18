@@ -129,7 +129,7 @@ if __name__ == '__main__':
     logging.addLevelName(logging.ERROR, "\033[91m   %s\033[0m" % logging.getLevelName(logging.ERROR))
     logging.addLevelName(logging.WARNING, "\033[91m %s\033[0m" % logging.getLevelName(logging.WARNING))
 
-    filename = 'centers-444.data'
+    filename = 'centers-444-train.data'
     log.info("create random cubes")
     sort_file(filename)
     keep_lowest_move_count_per_state(filename)

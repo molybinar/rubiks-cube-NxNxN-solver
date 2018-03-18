@@ -193,7 +193,7 @@ if __name__ == '__main__':
             if x % 1000 == 0:
                 log.info(x)
 
-    #sort_file(filename)
-    #keep_lowest_move_count_per_state(filename)
+    sort_file(filename)
+    keep_lowest_move_count_per_state(filename)
     sort_file_random(filename)
     log.info("finished")

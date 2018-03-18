@@ -1,2 +1,2 @@
-*.data
-*.data.*
+centers-444-train.data*
+*.pkl

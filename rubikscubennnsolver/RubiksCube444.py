@@ -469,7 +469,6 @@ class LookupTable444UFCentersSolveUnstaged(LookupTable):
                 return int(steps[0])
             else:
                 #log.info("%s: steps_cost %d for %s (%s)" % (self, len(steps), state_to_find, ' '.join(steps)))
-                # dwalton
                 return self.parent.get_solution_len_minus_rotates(steps)
 
     def state(self):
@@ -489,8 +488,6 @@ class LookupTable444ULCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged)
         parent_state = self.parent.state
         tmp_state = parent_state[:]
         tmp_solution = self.parent.solution[:]
-
-        # dwalton these cube rotates are being counted as part of the cost
 
         self.parent.rotate("y'")
         #for square_index in range(1, self.parent.sideD.max_pos + 1):
@@ -823,9 +820,9 @@ class NeuralNetwork444CentersSolveUnstaged(object):
                      BD_cost,
                      out_of_place_cost, center_unpaired_cost, nn_cost)
         # dwalton
-        self.parent.print_cube()
-        log.info("%s: inputs %s, nn_cost %s, result %s" % (self, pformat(inputs), nn_cost, result))
-        sys.exit(0)
+        #self.parent.print_cube()
+        #log.info("%s: inputs %s, nn_cost %s, result %s" % (self, pformat(inputs), nn_cost, result))
+        #sys.exit(0)
         return result
 
 
@@ -889,8 +886,8 @@ class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
             (), # illegal moves
 
             # prune tables
-            #(parent.nn_centers_solve_unstaged,),
-            (),
+            (parent.nn_centers_solve_unstaged,),
+            #(),
             linecount=87727430,
             max_depth=6)
 
@@ -1228,7 +1225,7 @@ class RubiksCube444(RubiksCube):
         self.lt_init_called = True
 
         # experiment
-        #self.nn_centers_solve_unstaged = NeuralNetwork444CentersSolveUnstaged('nn-centers-444.pkl', self)
+        self.nn_centers_solve_unstaged = NeuralNetwork444CentersSolveUnstaged('nn-centers-444.pkl', self)
         self.lt_UD_centers_solve_unstaged = LookupTable444UDCentersSolveUnstaged(self)
         self.lt_LR_centers_solve_unstaged = LookupTable444LRCentersSolveUnstaged(self)
         self.lt_FB_centers_solve_unstaged = LookupTable444FBCentersSolveUnstaged(self)

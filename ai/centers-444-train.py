@@ -69,11 +69,9 @@ if __name__ == '__main__':
 
 
     # Split-out validation dataset
-    #DATA_COLUMNS_COUNT = 6
     DATA_COLUMNS_COUNT = 17
 
     array = dataset.values
-    # dwalton
     X = array[:,0:DATA_COLUMNS_COUNT]
     Y = array[:,DATA_COLUMNS_COUNT]
     #validation_size = 0.20
@@ -104,12 +102,13 @@ if __name__ == '__main__':
     models.append(('CART', DecisionTreeClassifier()))
     #models.append(('NB', GaussianNB()))
     #models.append(('SVM', SVC()))
-    # dwalton
 
     # evaluate each model in turn
+    '''
     results = []
     names = []
     for (name, model) in models:
+        log.info("eval %s" % name)
         kfold = model_selection.KFold(n_splits=10, random_state=seed)
         cv_results = model_selection.cross_val_score(model, X_train, Y_train, cv=kfold, scoring=scoring)
         results.append(cv_results)
@@ -118,10 +117,8 @@ if __name__ == '__main__':
         print(msg)
 
     print("\n\n\n")
-    #sys.exit(0)
 
     # Compare Algorithms
-    '''
     fig = plt.figure()
     fig.suptitle('Algorithm Comparison')
     ax = fig.add_subplot(111)
@@ -131,23 +128,21 @@ if __name__ == '__main__':
     '''
 
     # Make predictions on validation dataset
-    log.info('predictions begin')
     cart = DecisionTreeClassifier()
+    log.info('fit begin')
     cart.fit(X_train, Y_train)
+    log.info('fit end')
+    log.info('predictions begin')
     predictions = cart.predict(X_validation)
-    log.info('predictions end')
+    log.info('predictions end...pickle to disk')
 
     # save the model to disk
     filename = 'nn-centers-444.pkl'
     pickle.dump(cart, open(filename, 'wb'))
     #sys.exit(0)
 
-    #print(accuracy_score(Y_validation, predictions))
-    #print(confusion_matrix(Y_validation, predictions))
     print(classification_report(Y_validation, predictions))
 
-    #log.info("predictions: %s" % pformat(predictions))
-    #log.info("Y_validation: %s" % pformat(Y_validation))
     stats = {}
 
     for (predicted, actual) in zip(predictions, Y_validation):
