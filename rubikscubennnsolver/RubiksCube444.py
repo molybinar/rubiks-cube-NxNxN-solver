@@ -10,7 +10,6 @@ from rubikscubennnsolver.LookupTable import (
 )
 from pprint import pformat
 import logging
-import pickle
 import sys
 
 log = logging.getLogger(__name__)
@@ -741,73 +740,6 @@ class LookupTable444BDCentersSolveUnstaged(LookupTable444UFCentersSolveUnstaged)
         return result
 
 
-class NeuralNetwork444CentersSolveUnstaged(object):
-
-    def __init__(self, filename, parent):
-        self.filename = filename
-        self.nn = pickle.load(open(self.filename, 'rb'))
-        self.parent = parent
-        self.max_depth = 99
-
-    def __str__(self):
-        return self.__class__.__name__
-
-    #def steps_cost(self):
-    def heuristic(self):
-        UD_cost = self.parent.lt_UD_centers_solve_unstaged.steps_cost()
-        LR_cost = self.parent.lt_LR_centers_solve_unstaged.steps_cost()
-        FB_cost = self.parent.lt_FB_centers_solve_unstaged.steps_cost()
-
-        UF_cost = self.parent.lt_UF_centers_solve_unstaged.steps_cost()
-        UL_cost = self.parent.lt_UL_centers_solve_unstaged.steps_cost()
-        UR_cost = self.parent.lt_UR_centers_solve_unstaged.steps_cost()
-        UB_cost = self.parent.lt_UB_centers_solve_unstaged.steps_cost()
-
-        LF_cost = self.parent.lt_LF_centers_solve_unstaged.steps_cost()
-        LB_cost = self.parent.lt_LB_centers_solve_unstaged.steps_cost()
-        LD_cost = self.parent.lt_LD_centers_solve_unstaged.steps_cost()
-
-        FR_cost = self.parent.lt_FR_centers_solve_unstaged.steps_cost()
-        FD_cost = self.parent.lt_FD_centers_solve_unstaged.steps_cost()
-
-        RB_cost = self.parent.lt_RB_centers_solve_unstaged.steps_cost()
-        RD_cost = self.parent.lt_RD_centers_solve_unstaged.steps_cost()
-
-        BD_cost = self.parent.lt_BD_centers_solve_unstaged.steps_cost()
-
-        out_of_place_count = self.parent.center_out_of_place_count()
-        out_of_place_cost = out_of_place_count / 8 
-
-        center_pairs_count = self.parent.center_pairs_count()
-        center_unpaired_count = 24 - center_pairs_count
-        center_unpaired_cost = center_unpaired_count / 8 
-
-        #inputs = [[UD_cost, LR_cost, FB_cost, UF_cost, out_of_place_cost, center_unpaired_cost]]
-        inputs = [[UD_cost, LR_cost, FB_cost,
-                   UF_cost, UL_cost, UR_cost, UB_cost,
-                   LF_cost, LB_cost, LD_cost,
-                   FR_cost, FD_cost,
-                   RB_cost, RD_cost,
-                   BD_cost,
-                   out_of_place_cost, center_unpaired_cost]]
-
-        nn_cost = int(self.nn.predict(inputs)[0])
-
-        #result = max(UD_cost, LR_cost, FB_cost, UF_cost, out_of_place_cost, center_unpaired_cost, nn_cost)
-        result = max(UD_cost, LR_cost, FB_cost,
-                     UF_cost, UL_cost, UR_cost, UB_cost,
-                     LF_cost, LB_cost, LD_cost,
-                     FR_cost, FD_cost,
-                     RB_cost, RD_cost,
-                     BD_cost,
-                     out_of_place_cost, center_unpaired_cost, nn_cost)
-        # dwalton
-        #self.parent.print_cube()
-        #log.info("%s: inputs %s, nn_cost %s, result %s" % (self, pformat(inputs), nn_cost, result))
-        #sys.exit(0)
-        return result
-
-
 class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
     """
     lookup-table-4x4x4-step200-ULFRBD-centers-solve-unstaged.txt
@@ -838,27 +770,8 @@ class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
     """
 
     def __init__(self, parent):
-        '''
-            (parent.lt_UD_centers_solve_unstaged,
-             parent.lt_LR_centers_solve_unstaged,
-             parent.lt_FB_centers_solve_unstaged,
-             #parent.lt_UF_centers_solve_unstaged,
-             #parent.lt_UL_centers_solve_unstaged,
-             #parent.lt_UR_centers_solve_unstaged,
-             #parent.lt_UB_centers_solve_unstaged,
 
-             #parent.lt_LF_centers_solve_unstaged,
-             #parent.lt_LB_centers_solve_unstaged,
-             #parent.lt_LD_centers_solve_unstaged,
-             #parent.lt_FR_centers_solve_unstaged,
-             #parent.lt_FD_centers_solve_unstaged,
-
-             #parent.lt_RB_centers_solve_unstaged,
-             #parent.lt_RD_centers_solve_unstaged,
-             #parent.lt_BD_centers_solve_unstaged,
-            ),
-        '''
-
+        # dwalton
         LookupTableIDA.__init__(
             self,
             parent,
@@ -868,14 +781,114 @@ class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
             (), # illegal moves
 
             # prune tables
-            (parent.nn_centers_solve_unstaged,),
-            #(),
+            (parent.lt_UD_centers_solve_unstaged,
+             parent.lt_LR_centers_solve_unstaged,
+             parent.lt_FB_centers_solve_unstaged,
+             parent.lt_UF_centers_solve_unstaged,
+             parent.lt_UL_centers_solve_unstaged,
+             parent.lt_UR_centers_solve_unstaged,
+             parent.lt_UB_centers_solve_unstaged,
+
+             parent.lt_LF_centers_solve_unstaged,
+             parent.lt_LB_centers_solve_unstaged,
+             parent.lt_LD_centers_solve_unstaged,
+             parent.lt_FR_centers_solve_unstaged,
+             parent.lt_FD_centers_solve_unstaged,
+
+             parent.lt_RB_centers_solve_unstaged,
+             parent.lt_RD_centers_solve_unstaged,
+             parent.lt_BD_centers_solve_unstaged,
+            ),
+
             linecount=87727430,
             max_depth=6)
 
     def state(self):
         parent_state = self.parent.state
         result = ''.join([parent_state[x] for x in centers_444])
+        return result
+
+    def ida_heuristic(self):
+        UD_cost = self.parent.lt_UD_centers_solve_unstaged.steps_cost()
+        if UD_cost >= 8:
+            return UD_cost
+
+        LR_cost = self.parent.lt_LR_centers_solve_unstaged.steps_cost()
+        if LR_cost >= 8:
+            return LR_cost
+
+        FB_cost = self.parent.lt_FB_centers_solve_unstaged.steps_cost()
+        if FB_cost >= 8:
+            return FB_cost
+
+        UF_cost = self.parent.lt_UF_centers_solve_unstaged.steps_cost()
+        if UF_cost >= 8:
+            return UF_cost
+
+        UL_cost = self.parent.lt_UL_centers_solve_unstaged.steps_cost()
+        if UL_cost >= 8:
+            return UL_cost
+
+        UR_cost = self.parent.lt_UR_centers_solve_unstaged.steps_cost()
+        if UR_cost >= 8:
+            return UR_cost
+
+        UB_cost = self.parent.lt_UB_centers_solve_unstaged.steps_cost()
+        if UB_cost >= 8:
+            return UB_cost
+
+        LF_cost = self.parent.lt_LF_centers_solve_unstaged.steps_cost()
+        if LF_cost >= 8:
+            return LF_cost
+
+        LB_cost = self.parent.lt_LB_centers_solve_unstaged.steps_cost()
+        if LB_cost >= 8:
+            return LB_cost
+
+        LD_cost = self.parent.lt_LD_centers_solve_unstaged.steps_cost()
+        if LD_cost >= 8:
+            return LD_cost
+
+        FR_cost = self.parent.lt_FR_centers_solve_unstaged.steps_cost()
+        if FR_cost >= 8:
+            return FR_cost
+
+        FD_cost = self.parent.lt_FD_centers_solve_unstaged.steps_cost()
+        if FD_cost >= 8:
+            return FD_cost
+
+        RB_cost = self.parent.lt_RB_centers_solve_unstaged.steps_cost()
+        if RB_cost >= 8:
+            return RB_cost
+
+        RD_cost = self.parent.lt_RD_centers_solve_unstaged.steps_cost()
+        if RD_cost >= 8:
+            return RD_cost
+
+        BD_cost = self.parent.lt_BD_centers_solve_unstaged.steps_cost()
+        if BD_cost >= 8:
+            return BD_cost
+
+        out_of_place_count = self.parent.center_out_of_place_count()
+        out_of_place_cost = out_of_place_count / 8
+
+        center_pairs_count = self.parent.center_pairs_count()
+        center_unpaired_count = 24 - center_pairs_count
+        center_unpaired_cost = center_unpaired_count / 8
+
+        inputs = (UD_cost, LR_cost, FB_cost,
+                  UF_cost, UL_cost, UR_cost, UB_cost,
+                  LF_cost, LB_cost, LD_cost,
+                  FR_cost, FD_cost,
+                  RB_cost, RD_cost,
+                  BD_cost,
+                  out_of_place_cost, center_unpaired_cost)
+        result = max(inputs)
+
+        # dwalton
+        #self.parent.print_cube()
+        #log.info("%s: inputs %s, result %s" % (self, pformat(inputs), result))
+        #sys.exit(0)
         return result
 
 
@@ -1207,7 +1220,6 @@ class RubiksCube444(RubiksCube):
         self.lt_init_called = True
 
         # experiment
-        self.nn_centers_solve_unstaged = NeuralNetwork444CentersSolveUnstaged('nn-centers-444.pkl', self)
         self.lt_UD_centers_solve_unstaged = LookupTable444UDCentersSolveUnstaged(self)
         self.lt_LR_centers_solve_unstaged = LookupTable444LRCentersSolveUnstaged(self)
         self.lt_FB_centers_solve_unstaged = LookupTable444FBCentersSolveUnstaged(self)
@@ -1272,12 +1284,12 @@ class RubiksCube444(RubiksCube):
         if self.centers_solved():
             return
 
+        # dwalton
         log.info("%s: Start of Phase1" % self)
         #self.lt_ULFRBD_centers_solve_unstaged.ida_all_the_way = True
         self.lt_ULFRBD_centers_solve_unstaged.solve()
         self.print_cube()
         log.info("%s: End of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
-        return
         sys.exit(0)
 
         # Stage all centers then solve all centers...averages 18.12 moves
@@ -1584,7 +1596,7 @@ class RubiksCube444(RubiksCube):
         for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
             for square_index in side.center_pos:
                 if self.state[square_index] != 'x' and self.state[square_index] != side.name:
-                    result += 1 
+                    result += 1
 
         return result
 
