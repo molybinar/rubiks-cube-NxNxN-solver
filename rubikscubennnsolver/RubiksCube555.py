@@ -9,24 +9,13 @@ from rubikscubennnsolver.RubiksCube333 import moves_3x3x3
 from rubikscubennnsolver.RubiksCube444 import RubiksCube444, moves_4x4x4, solved_4x4x4
 from rubikscubennnsolver.RubiksCube444Misc import tsai_edge_mapping_combinations
 from rubikscubennnsolver.LookupTable import (
-    get_characters_common_count,
-    stage_first_four_edges_wing_str_combos,
     steps_on_same_face_and_layer,
     LookupTable,
+    LookupTableCostOnly,
     LookupTableIDA,
-    LookupTableAStar
 )
-
-from rubikscubennnsolver.rotate_xxx import rotate_555
-import datetime as dt
 import itertools
 import logging
-import math
-import os
-import random
-import re
-import subprocess
-import sys
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +36,89 @@ LFRB_centers_555 = (
     57, 58, 59, 62, 63, 64, 67, 68, 69,
     82, 83, 84, 87, 88, 89, 92, 93, 94,
     107, 108, 109, 112, 113, 114, 117, 118, 119
+)
+
+edge_orbit_0_555 = (
+    2, 4, 10, 20, 24, 22, 16, 6,
+    27, 29, 35, 45, 49, 47, 41, 31,
+    52, 54, 60, 70, 74, 72, 66, 56,
+    77, 79, 85, 95, 99, 97, 91, 81,
+    102, 104, 110, 120, 124, 122, 116, 106,
+    127, 129, 135, 145, 149, 147, 141, 131
+)
+
+edge_orbit_1_555 = (
+    3, 15, 23, 11,
+    28, 40, 48, 36,
+    53, 65, 73, 61,
+    78, 90, 98, 86,
+    103, 115, 123, 111,
+    128, 140, 148, 136
+)
+
+corners_555 = (
+    1, 5, 21, 25,
+    26, 30, 46, 50,
+    51, 55, 71, 75,
+    76, 80, 96, 100,
+    101, 105, 121, 125,
+    126, 130, 146, 150
+)
+
+x_centers_555 = (
+    7, 9, 17, 19,
+    32, 34, 42, 44,
+    57, 59, 67, 69,
+    82, 84, 92, 94,
+    107, 109, 117, 119,
+    132, 134, 142, 144
+)
+
+t_centers_555 = (
+    8, 12, 14, 18,
+    33, 37, 39, 43,
+    58, 62, 64, 68,
+    83, 87, 89, 93,
+    108, 112, 114, 118,
+    133, 137, 139, 143
+)
+
+edges_555 = (
+    2, 3, 4,
+    6, 10,
+    11, 15,
+    16, 20,
+    22, 23, 24,
+
+    27, 28, 29,
+    31, 35,
+    36, 40,
+    41, 45,
+    47, 48, 49,
+
+    52, 53, 54,
+    56, 60,
+    61, 65,
+    66, 70,
+    72, 73, 74,
+
+    77, 78, 79,
+    81, 85,
+    86, 90,
+    91, 95,
+    97, 98, 99,
+
+    102, 103, 104,
+    106, 110,
+    111, 115,
+    116, 120,
+    122, 123, 124,
+
+    127, 128, 129,
+    131, 135,
+    136, 140,
+    141, 145,
+    147, 148, 149
 )
 
 wings_555 = (
@@ -146,7 +218,7 @@ class NoEdgeSolution(Exception):
     pass
 
 
-class LookupTable555UDTCenterStage(LookupTable):
+class LookupTable555UDTCenterStageCostOnly(LookupTableCostOnly):
     """
     There are 4 T-centers and 4 X-centers so (24!/(8! * 16!))^2 is 540,917,591,841
     We cannot build a table that large so we will build it 7 moves deep and use
@@ -169,55 +241,21 @@ class LookupTable555UDTCenterStage(LookupTable):
     """
 
     def __init__(self, parent):
-        LookupTable.__init__(
+        LookupTableCostOnly.__init__(
             self,
             parent,
-            'lookup-table-5x5x5-step11-UD-centers-stage-t-center-only.txt',
-            '174000000000ba',
-            linecount=735471)
+            'lookup-table-5x5x5-step11-UD-centers-stage-t-center-only.cost-only.txt',
+            'TBD',
+            linecount=735471,
+            max_depth=8)
 
     def state(self):
         parent_state = self.parent.state
-        result = [
-            # Upper
-            'x', parent_state[8], 'x',
-            parent_state[12], parent_state[13], parent_state[14],
-            'x', parent_state[18], 'x',
-
-            # Left
-            'x', parent_state[33], 'x',
-            parent_state[37], parent_state[38], parent_state[39],
-            'x', parent_state[43], 'x',
-
-            # Front
-            'x', parent_state[58], 'x',
-            parent_state[62], parent_state[63], parent_state[64],
-            'x', parent_state[68], 'x',
-
-            # Right
-            'x', parent_state[83], 'x',
-            parent_state[87], parent_state[88], parent_state[89],
-            'x', parent_state[93], 'x',
-
-            # Back
-            'x', parent_state[108], 'x',
-            parent_state[112], parent_state[113], parent_state[114],
-            'x', parent_state[118], 'x',
-
-            # Down
-            'x', parent_state[133], 'x',
-            parent_state[137], parent_state[138], parent_state[139],
-            'x', parent_state[143], 'x'
-        ]
-
-        result = ['1' if x in ('U', 'D') else '0' for x in result]
-        result = ''.join(result)
-
-        # Convert to hex
-        return self.hex_format % int(result, 2)
+        result = ''.join(['1' if parent_state[x] in ('U', 'D') else '0' for x in t_centers_555])
+        return int(result, 2)
 
 
-class LookupTable555UDXCenterStage(LookupTable):
+class LookupTable555UDXCenterStageCostOnly(LookupTableCostOnly):
     """
     lookup-table-5x5x5-step12-UD-centers-stage-x-center-only.txt
     ============================================================
@@ -234,52 +272,19 @@ class LookupTable555UDXCenterStage(LookupTable):
     """
 
     def __init__(self, parent):
-        LookupTable.__init__(
+        LookupTableCostOnly.__init__(
             self,
             parent,
-            'lookup-table-5x5x5-step12-UD-centers-stage-x-center-only.txt',
-            '2aa00000000155',
-            linecount=735471)
+            'lookup-table-5x5x5-step12-UD-centers-stage-x-center-only.cost-only.txt',
+            'f0000f',
+            linecount=735471,
+            max_depth=8)
 
     def state(self):
         parent_state = self.parent.state
-        result = [
-            # Upper
-            parent_state[7], 'x', parent_state[9],
-            'x', parent_state[13], 'x',
-            parent_state[17], 'x', parent_state[19],
+        result = ''.join(['1' if parent_state[x] in ('U', 'D') else '0' for x in x_centers_555])
 
-            # Left
-            parent_state[32], 'x', parent_state[34],
-            'x', parent_state[38], 'x',
-            parent_state[42], 'x', parent_state[44],
-
-            # Front
-            parent_state[57], 'x', parent_state[59],
-            'x', parent_state[63], 'x',
-            parent_state[67], 'x', parent_state[69],
-
-            # Right
-            parent_state[82], 'x', parent_state[84],
-            'x', parent_state[88], 'x',
-            parent_state[92], 'x', parent_state[94],
-
-            # Back
-            parent_state[107], 'x', parent_state[109],
-            'x', parent_state[113], 'x',
-            parent_state[117], 'x', parent_state[119],
-
-            # Down
-            parent_state[132], 'x', parent_state[134],
-            'x', parent_state[138], 'x',
-            parent_state[142], 'x', parent_state[144]
-        ]
-
-        result = ['1' if x in ('U', 'D') else '0' for x in result]
-        result = ''.join(result)
-
-        # Convert to hex
-        return self.hex_format % int(result, 2)
+        return int(result, 2)
 
 
 class LookupTableIDA555UDCentersStage(LookupTableIDA):
@@ -290,10 +295,12 @@ class LookupTableIDA555UDCentersStage(LookupTableIDA):
     2 steps has 98 entries (0 percent, 19.60x previous step)
     3 steps has 2,036 entries (0 percent, 20.78x previous step)
     4 steps has 41,096 entries (0 percent, 20.18x previous step)
-    5 steps has 824,950 entries (4 percent, 20.07x previous step)
-    6 steps has 16,300,291 entries (94 percent, 19.76x previous step)
+    5 steps has 824,950 entries (0 percent, 20.07x previous step)
+    6 steps has 16,300,291 entries (4 percent, 19.76x previous step)
+    7 steps has 311,709,304 entries (94 percent, 19.12x previous step)
 
-    Total: 17,168,476 entries
+    Total: 328,877,780 entries
+    Average: 6.945019 moves
     """
 
     def __init__(self, parent):
@@ -301,467 +308,29 @@ class LookupTableIDA555UDCentersStage(LookupTableIDA):
             self,
             parent,
             'lookup-table-5x5x5-step10-UD-centers-stage.txt',
-            '3fe000000001ff', # UUUUUUUUUxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxUUUUUUUUU
+            '3fe000000001ff',
             moves_5x5x5,
             (), # illegal_moves
 
             # prune tables
             (parent.lt_UD_T_centers_stage,
              parent.lt_UD_X_centers_stage),
-            linecount=17168476)
+
+            #linecount=17168476, # 6-deep
+            #max_depth=6)
+            linecount=328877780, # 7-deep
+            max_depth=7)
 
     def state(self):
         parent_state = self.parent.state
-
-        result = [
-            # Upper
-            parent_state[7], parent_state[8], parent_state[9],
-            parent_state[12], parent_state[13], parent_state[14],
-            parent_state[17], parent_state[18], parent_state[19],
-
-            # Left
-            parent_state[32], parent_state[33], parent_state[34],
-            parent_state[37], parent_state[38], parent_state[39],
-            parent_state[42], parent_state[43], parent_state[44],
-
-            # Front
-            parent_state[57], parent_state[58], parent_state[59],
-            parent_state[62], parent_state[63], parent_state[64],
-            parent_state[67], parent_state[68], parent_state[69],
-
-            # Right
-            parent_state[82], parent_state[83], parent_state[84],
-            parent_state[87], parent_state[88], parent_state[89],
-            parent_state[92], parent_state[93], parent_state[94],
-
-            # Back
-            parent_state[107], parent_state[108], parent_state[109],
-            parent_state[112], parent_state[113], parent_state[114],
-            parent_state[117], parent_state[118], parent_state[119],
-
-            # Down
-            parent_state[132], parent_state[133], parent_state[134],
-            parent_state[137], parent_state[138], parent_state[139],
-            parent_state[142], parent_state[143], parent_state[144]
-        ]
-
-        result = ['1' if x in ('U', 'D') else '0' for x in result]
-        result = ''.join(result)
+        result = ''.join(['1' if parent_state[x] in ('U', 'D') else '0' for x in centers_555])
 
         # Convert to hex
         return self.hex_format % int(result, 2)
 
 
-class LookupTable555LRTCenterStage(LookupTable):
-
-    def __init__(self, parent):
-        LookupTable.__init__(
-            self,
-            parent,
-            'lookup-table-5x5x5-step103-LR-centers-stage-t-center-only.txt',
-            '000ba002e80000',
-            linecount=735471)
-
-    def state(self):
-        parent_state = self.parent.state
-        result = [
-            # Upper
-            'x', parent_state[8], 'x',
-            parent_state[12], parent_state[13], parent_state[14],
-            'x', parent_state[18], 'x',
-
-            # Left
-            'x', parent_state[33], 'x',
-            parent_state[37], parent_state[38], parent_state[39],
-            'x', parent_state[43], 'x',
-
-            # Front
-            'x', parent_state[58], 'x',
-            parent_state[62], parent_state[63], parent_state[64],
-            'x', parent_state[68], 'x',
-
-            # Right
-            'x', parent_state[83], 'x',
-            parent_state[87], parent_state[88], parent_state[89],
-            'x', parent_state[93], 'x',
-
-            # Back
-            'x', parent_state[108], 'x',
-            parent_state[112], parent_state[113], parent_state[114],
-            'x', parent_state[118], 'x',
-
-            # Down
-            'x', parent_state[133], 'x',
-            parent_state[137], parent_state[138], parent_state[139],
-            'x', parent_state[143], 'x'
-        ]
-
-        result = ['1' if x in ('L', 'R') else '0' for x in result]
-        result = ''.join(result)
-
-        # Convert to hex
-        return self.hex_format % int(result, 2)
-
-
-class LookupTable555LRXCenterStage(LookupTable):
+class LookupTableIDA555LRCentersStage(LookupTable):
     """
-    """
-
-    def __init__(self, parent):
-        LookupTable.__init__(
-            self,
-            parent,
-            'lookup-table-5x5x5-step104-LR-centers-stage-x-center-only.txt',
-            '00155005540000',
-            linecount=735471)
-
-    def state(self):
-        parent_state = self.parent.state
-        result = [
-            # Upper
-            parent_state[7], 'x', parent_state[9],
-            'x', parent_state[13], 'x',
-            parent_state[17], 'x', parent_state[19],
-
-            # Left
-            parent_state[32], 'x', parent_state[34],
-            'x', parent_state[38], 'x',
-            parent_state[42], 'x', parent_state[44],
-
-            # Front
-            parent_state[57], 'x', parent_state[59],
-            'x', parent_state[63], 'x',
-            parent_state[67], 'x', parent_state[69],
-
-            # Right
-            parent_state[82], 'x', parent_state[84],
-            'x', parent_state[88], 'x',
-            parent_state[92], 'x', parent_state[94],
-
-            # Back
-            parent_state[107], 'x', parent_state[109],
-            'x', parent_state[113], 'x',
-            parent_state[117], 'x', parent_state[119],
-
-            # Down
-            parent_state[132], 'x', parent_state[134],
-            'x', parent_state[138], 'x',
-            parent_state[142], 'x', parent_state[144]
-        ]
-
-        result = ['1' if x in ('L', 'R') else '0' for x in result]
-        result = ''.join(result)
-
-        # Convert to hex
-        return self.hex_format % int(result, 2)
-
-
-class LookupTable555FBTCenterStage(LookupTable):
-
-    def __init__(self, parent):
-        LookupTable.__init__(
-            self,
-            parent,
-            'lookup-table-5x5x5-step105-FB-centers-stage-t-center-only.txt',
-            '000005d0017400',
-            linecount=735471)
-
-    def state(self):
-        parent_state = self.parent.state
-        result = [
-            # Upper
-            'x', parent_state[8], 'x',
-            parent_state[12], parent_state[13], parent_state[14],
-            'x', parent_state[18], 'x',
-
-            # Left
-            'x', parent_state[33], 'x',
-            parent_state[37], parent_state[38], parent_state[39],
-            'x', parent_state[43], 'x',
-
-            # Front
-            'x', parent_state[58], 'x',
-            parent_state[62], parent_state[63], parent_state[64],
-            'x', parent_state[68], 'x',
-
-            # Right
-            'x', parent_state[83], 'x',
-            parent_state[87], parent_state[88], parent_state[89],
-            'x', parent_state[93], 'x',
-
-            # Back
-            'x', parent_state[108], 'x',
-            parent_state[112], parent_state[113], parent_state[114],
-            'x', parent_state[118], 'x',
-
-            # Down
-            'x', parent_state[133], 'x',
-            parent_state[137], parent_state[138], parent_state[139],
-            'x', parent_state[143], 'x'
-        ]
-
-        result = ['1' if x in ('F', 'B') else '0' for x in result]
-        result = ''.join(result)
-
-        # Convert to hex
-        return self.hex_format % int(result, 2)
-
-
-class LookupTable555FBXCenterStage(LookupTable):
-    """
-    """
-
-    def __init__(self, parent):
-        LookupTable.__init__(
-            self,
-            parent,
-            'lookup-table-5x5x5-step106-FB-centers-stage-x-center-only.txt',
-            '00000aa802aa00',
-            linecount=735471)
-
-    def state(self):
-        parent_state = self.parent.state
-        result = [
-            # Upper
-            parent_state[7], 'x', parent_state[9],
-            'x', parent_state[13], 'x',
-            parent_state[17], 'x', parent_state[19],
-
-            # Left
-            parent_state[32], 'x', parent_state[34],
-            'x', parent_state[38], 'x',
-            parent_state[42], 'x', parent_state[44],
-
-            # Front
-            parent_state[57], 'x', parent_state[59],
-            'x', parent_state[63], 'x',
-            parent_state[67], 'x', parent_state[69],
-
-            # Right
-            parent_state[82], 'x', parent_state[84],
-            'x', parent_state[88], 'x',
-            parent_state[92], 'x', parent_state[94],
-
-            # Back
-            parent_state[107], 'x', parent_state[109],
-            'x', parent_state[113], 'x',
-            parent_state[117], 'x', parent_state[119],
-
-            # Down
-            parent_state[132], 'x', parent_state[134],
-            'x', parent_state[138], 'x',
-            parent_state[142], 'x', parent_state[144]
-        ]
-
-        result = ['1' if x in ('F', 'B') else '0' for x in result]
-        result = ''.join(result)
-
-        # Convert to hex
-        return self.hex_format % int(result, 2)
-
-
-class LookupTableIDA555AllCenterStage(LookupTableIDA):
-    """
-    lookup-table-5x5x5-step100-ALL-centers-stage.txt
-    ================================================
-    1 steps has 7 entries (0 percent, 0.00x previous step)
-    2 steps has 147 entries (0 percent, 21.00x previous step)
-    3 steps has 3,054 entries (0 percent, 20.78x previous step)
-    4 steps has 65,520 entries (4 percent, 21.45x previous step)
-    5 steps has 1,467,630 entries (95 percent, 22.40x previous step)
-
-    Total: 1,536,358 entries
-    """
-
-    def __init__(self, parent):
-        LookupTableIDA.__init__(
-            self,
-            parent,
-            'lookup-table-5x5x5-step100-ALL-centers-stage.txt',
-            'UUUUUUUUULLLLLLLLLFFFFFFFFFLLLLLLLLLFFFFFFFFFUUUUUUUUU',
-            moves_5x5x5,
-            (), # illegal_moves
-
-            # prune tables
-            (parent.lt_UD_T_centers_stage,
-             parent.lt_UD_X_centers_stage,
-             parent.lt_LR_T_centers_stage,
-             parent.lt_LR_X_centers_stage,
-             parent.lt_FB_T_centers_stage,
-             parent.lt_FB_X_centers_stage),
-            linecount=1536358)
-
-    def state(self):
-        parent_state = self.parent.state
-
-        tmp_result = [
-            # Upper
-            parent_state[7], parent_state[8], parent_state[9],
-            parent_state[12], parent_state[13], parent_state[14],
-            parent_state[17], parent_state[18], parent_state[19],
-
-            # Left
-            parent_state[32], parent_state[33], parent_state[34],
-            parent_state[37], parent_state[38], parent_state[39],
-            parent_state[42], parent_state[43], parent_state[44],
-
-            # Front
-            parent_state[57], parent_state[58], parent_state[59],
-            parent_state[62], parent_state[63], parent_state[64],
-            parent_state[67], parent_state[68], parent_state[69],
-
-            # Right
-            parent_state[82], parent_state[83], parent_state[84],
-            parent_state[87], parent_state[88], parent_state[89],
-            parent_state[92], parent_state[93], parent_state[94],
-
-            # Back
-            parent_state[107], parent_state[108], parent_state[109],
-            parent_state[112], parent_state[113], parent_state[114],
-            parent_state[117], parent_state[118], parent_state[119],
-
-            # Down
-            parent_state[132], parent_state[133], parent_state[134],
-            parent_state[137], parent_state[138], parent_state[139],
-            parent_state[142], parent_state[143], parent_state[144]
-        ]
-
-        result = []
-
-        for x in tmp_result:
-            if x in ('U', 'D'):
-                result.append('U')
-            elif x in ('L', 'R'):
-                result.append('L')
-            elif x in ('F', 'B'):
-                result.append('F')
-
-        return ''.join(result)
-
-
-class LookupTable555LRXCentersStage(LookupTable):
-    """
-    lookup-table-5x5x5-step21-LR-centers-stage-x-center-only.txt
-    ============================================================
-    1 steps has 3 entries (0 percent, 0.00x previous step)
-    2 steps has 29 entries (0 percent, 9.67x previous step)
-    3 steps has 234 entries (1 percent, 8.07x previous step)
-    4 steps has 1,246 entries (9 percent, 5.32x previous step)
-    5 steps has 4,466 entries (34 percent, 3.58x previous step)
-    6 steps has 6,236 entries (48 percent, 1.40x previous step)
-    7 steps has 656 entries (5 percent, 0.11x previous step)
-
-    Total: 12,870 entries
-    """
-
-    def __init__(self, parent):
-        LookupTable.__init__(
-            self,
-            parent,
-            'lookup-table-5x5x5-step21-LR-centers-stage-x-center-only.txt',
-            'aa802aa00',
-            linecount=12870)
-
-    def state(self):
-        parent_state = self.parent.state
-
-        result = [
-            # Left
-            parent_state[32], 'x', parent_state[34],
-            'x', parent_state[38], 'x',
-            parent_state[42], 'x', parent_state[44],
-
-            # Front
-            parent_state[57], 'x', parent_state[59],
-            'x', parent_state[63], 'x',
-            parent_state[67], 'x', parent_state[69],
-
-            # Right
-            parent_state[82], 'x', parent_state[84],
-            'x', parent_state[88], 'x',
-            parent_state[92], 'x', parent_state[94],
-
-            # Back
-            parent_state[107], 'x', parent_state[109],
-            'x', parent_state[113], 'x',
-            parent_state[117], 'x', parent_state[119]]
-
-        result = ['1' if x in ('L', 'R') else '0' for x in result]
-        result = ''.join(result)
-
-        # Convert to hex
-        return self.hex_format % int(result, 2)
-
-
-class LookupTable555LRTCentersStage(LookupTable):
-    """
-    lookup-table-5x5x5-step22-LR-centers-stage-t-center-only.txt
-    ============================================================
-    1 steps has 3 entries (0 percent, 0.00x previous step)
-    2 steps has 25 entries (0 percent, 8.33x previous step)
-    3 steps has 210 entries (1 percent, 8.40x previous step)
-    4 steps has 722 entries (5 percent, 3.44x previous step)
-    5 steps has 1,752 entries (13 percent, 2.43x previous step)
-    6 steps has 4,033 entries (31 percent, 2.30x previous step)
-    7 steps has 4,014 entries (31 percent, 1.00x previous step)
-    8 steps has 1,977 entries (15 percent, 0.49x previous step)
-    9 steps has 134 entries (1 percent, 0.07x previous step)
-
-    Total: 12,870 entries
-    """
-
-    def __init__(self, parent):
-        LookupTable.__init__(
-            self,
-            parent,
-            'lookup-table-5x5x5-step22-LR-centers-stage-t-center-only.txt',
-            '5d0017400',
-            linecount=12870)
-
-    def state(self):
-        parent_state = self.parent.state
-        result = [
-            # Left
-            'x', parent_state[33], 'x',
-            parent_state[37], parent_state[38], parent_state[39],
-            'x', parent_state[43], 'x',
-
-            # Front
-            'x', parent_state[58], 'x',
-            parent_state[62], parent_state[63], parent_state[64],
-            'x', parent_state[68], 'x',
-
-            # Right
-            'x', parent_state[83], 'x',
-            parent_state[87], parent_state[88], parent_state[89],
-            'x', parent_state[93], 'x',
-
-            # Back
-            'x', parent_state[108], 'x',
-            parent_state[112], parent_state[113], parent_state[114],
-            'x', parent_state[118], 'x']
-
-        result = ['1' if x in ('L', 'R') else '0' for x in result]
-        result = ''.join(result)
-
-        # Convert to hex
-        return self.hex_format % int(result, 2)
-
-
-class LookupTableIDA555LRCentersStage(LookupTableIDA):
-    """
-    Stage LR centers to sides L or R, this will automagically stage
-    the F and B centers to sides F or B. 4 T-centers and 4 X-centers
-    on 4 sides (ignore U and D since they are solved) but we treat
-    L and R as one color so 8! on the bottom.
-    (16!/(8! * 8!)))^2 is 165,636,900
-
-    The copy of this table that is checked in to the repo only goes to 7-deep thus the need for IDA.
-    If you build the table out the entire way we'll never use the prune tables and you will get
-    a hit on the first lookup.
-
-    12,870/165,636,900 is 0.000 0777 so this will be a fast IDA search
-
     lookup-table-5x5x5-step20-LR-centers-stage.txt
     ==============================================
     1 steps has 3 entries (0 percent)
@@ -781,45 +350,16 @@ class LookupTableIDA555LRCentersStage(LookupTableIDA):
     """
 
     def __init__(self, parent):
-        LookupTableIDA.__init__(
+        LookupTable.__init__(
             self,
             parent,
             'lookup-table-5x5x5-step20-LR-centers-stage.txt',
-            'ff803fe00', # LLLLLLLLLxxxxxxxxxLLLLLLLLLxxxxxxxxx
-            moves_5x5x5,
-            ("Rw", "Rw'", "Lw", "Lw'", "Fw", "Fw'", "Bw", "Bw'"), # illegal moves
-
-            # prune tables
-            (parent.lt_LR_centers_stage_x_center_only,
-             parent.lt_LR_centers_stage_t_center_only),
-            linecount=3805239)
+            'ff803fe00',
+            linecount=165636900)
 
     def state(self):
         parent_state = self.parent.state
-        result = [
-            # Left
-            parent_state[32], parent_state[33], parent_state[34],
-            parent_state[37], parent_state[38], parent_state[39],
-            parent_state[42], parent_state[43], parent_state[44],
-
-            # Front
-            parent_state[57], parent_state[58], parent_state[59],
-            parent_state[62], parent_state[63], parent_state[64],
-            parent_state[67], parent_state[68], parent_state[69],
-
-            # Right
-            parent_state[82], parent_state[83], parent_state[84],
-            parent_state[87], parent_state[88], parent_state[89],
-            parent_state[92], parent_state[93], parent_state[94],
-
-            # Back
-            parent_state[107], parent_state[108], parent_state[109],
-            parent_state[112], parent_state[113], parent_state[114],
-            parent_state[117], parent_state[118], parent_state[119]
-        ]
-
-        result = ['1' if x in ('L', 'R') else '0' for x in result]
-        result = ''.join(result)
+        result = ''.join(['1' if parent_state[x] in ('L', 'R') else '0' for x in LFRB_centers_555])
 
         # Convert to hex
         return self.hex_format % int(result, 2)
@@ -1065,44 +605,12 @@ class LookupTableULCentersSolve(LookupTable):
             parent,
             'lookup-table-5x5x5-step31-UL-centers-solve.txt',
             '3ffff000000000',
-            linecount=24010000)
+            linecount=24010000,
+            max_depth=13)
 
     def state(self):
         parent_state = self.parent.state
-        result = [
-            # Upper
-            parent_state[7], parent_state[8], parent_state[9],
-            parent_state[12], parent_state[13], parent_state[14],
-            parent_state[17], parent_state[18], parent_state[19],
-
-            # Left
-            parent_state[32], parent_state[33], parent_state[34],
-            parent_state[37], parent_state[38], parent_state[39],
-            parent_state[42], parent_state[43], parent_state[44],
-
-            # Front
-            parent_state[57], parent_state[58], parent_state[59],
-            parent_state[62], parent_state[63], parent_state[64],
-            parent_state[67], parent_state[68], parent_state[69],
-
-            # Right
-            parent_state[82], parent_state[83], parent_state[84],
-            parent_state[87], parent_state[88], parent_state[89],
-            parent_state[92], parent_state[93], parent_state[94],
-
-            # Back
-            parent_state[107], parent_state[108], parent_state[109],
-            parent_state[112], parent_state[113], parent_state[114],
-            parent_state[117], parent_state[118], parent_state[119],
-
-            # Down
-            parent_state[132], parent_state[133], parent_state[134],
-            parent_state[137], parent_state[138], parent_state[139],
-            parent_state[142], parent_state[143], parent_state[144]
-        ]
-
-        result = ['1' if x in ('U', 'L') else '0' for x in result]
-        result = ''.join(result)
+        result = ''.join(['1' if parent_state[x] in ('U', 'L') else '0' for x in centers_555])
 
         # Convert to hex
         return self.hex_format % int(result, 2)
@@ -1140,44 +648,12 @@ class LookupTableUFCentersSolve(LookupTable):
             parent,
             'lookup-table-5x5x5-step33-UF-centers-solve.txt',
             '3fe00ff8000000',
-            linecount=24010000)
+            linecount=24010000,
+            max_depth=13)
 
     def state(self):
         parent_state = self.parent.state
-        result = [
-            # Upper
-            parent_state[7], parent_state[8], parent_state[9],
-            parent_state[12], parent_state[13], parent_state[14],
-            parent_state[17], parent_state[18], parent_state[19],
-
-            # Left
-            parent_state[32], parent_state[33], parent_state[34],
-            parent_state[37], parent_state[38], parent_state[39],
-            parent_state[42], parent_state[43], parent_state[44],
-
-            # Front
-            parent_state[57], parent_state[58], parent_state[59],
-            parent_state[62], parent_state[63], parent_state[64],
-            parent_state[67], parent_state[68], parent_state[69],
-
-            # Right
-            parent_state[82], parent_state[83], parent_state[84],
-            parent_state[87], parent_state[88], parent_state[89],
-            parent_state[92], parent_state[93], parent_state[94],
-
-            # Back
-            parent_state[107], parent_state[108], parent_state[109],
-            parent_state[112], parent_state[113], parent_state[114],
-            parent_state[117], parent_state[118], parent_state[119],
-
-            # Down
-            parent_state[132], parent_state[133], parent_state[134],
-            parent_state[137], parent_state[138], parent_state[139],
-            parent_state[142], parent_state[143], parent_state[144]
-        ]
-
-        result = ['1' if x in ('U', 'F') else '0' for x in result]
-        result = ''.join(result)
+        result = ''.join(['1' if parent_state[x] in ('U', 'F') else '0' for x in centers_555])
 
         # Convert to hex
         return self.hex_format % int(result, 2)
@@ -1215,43 +691,12 @@ class LookupTableIDA555ULFRBDCentersSolve(LookupTableIDA):
             # prune tables
             (parent.lt_UL_centers_solve,
              parent.lt_UF_centers_solve),
-            linecount=13684136)
+            linecount=13684136,
+            max_depth=7)
 
     def state(self):
         parent_state = self.parent.state
-        result = [
-            # Upper
-            parent_state[7], parent_state[8], parent_state[9],
-            parent_state[12], parent_state[13], parent_state[14],
-            parent_state[17], parent_state[18], parent_state[19],
-
-            # Left
-            parent_state[32], parent_state[33], parent_state[34],
-            parent_state[37], parent_state[38], parent_state[39],
-            parent_state[42], parent_state[43], parent_state[44],
-
-            # Front
-            parent_state[57], parent_state[58], parent_state[59],
-            parent_state[62], parent_state[63], parent_state[64],
-            parent_state[67], parent_state[68], parent_state[69],
-
-            # Right
-            parent_state[82], parent_state[83], parent_state[84],
-            parent_state[87], parent_state[88], parent_state[89],
-            parent_state[92], parent_state[93], parent_state[94],
-
-            # Back
-            parent_state[107], parent_state[108], parent_state[109],
-            parent_state[112], parent_state[113], parent_state[114],
-            parent_state[117], parent_state[118], parent_state[119],
-
-            # Down
-            parent_state[132], parent_state[133], parent_state[134],
-            parent_state[137], parent_state[138], parent_state[139],
-            parent_state[142], parent_state[143], parent_state[144]
-        ]
-
-        result = ''.join(result)
+        result = ''.join([parent_state[x] for x in centers_555])
         return result
 
 
@@ -1340,26 +785,28 @@ def LR_edges_recolor_pattern_555(state):
 
 class LookupTable555StageFirstFourEdges(LookupTable):
     """
-    lookup-table-5x5x5-step105-stage-first-four-edges.txt
+    lookup-table-5x5x5-step100-stage-first-four-edges.txt
     =====================================================
     5 steps has 384 entries (0 percent, 0.00x previous step)
     6 steps has 5,032 entries (0 percent, 13.10x previous step)
-    7 steps has 40,712 entries (3 percent, 8.09x previous step)
-    8 steps has 136,236 entries (11 percent, 3.35x previous step)
-    9 steps has 1,034,328 entries (85 percent, 7.59x previous step)
+    7 steps has 40,712 entries (0 percent, 8.09x previous step)
+    8 steps has 136,236 entries (2 percent, 3.35x previous step)
+    9 steps has 1,034,328 entries (19 percent, 7.59x previous step)
+    10 steps has 3,997,220 entries (76 percent, 3.86x previous step)
 
-    Total: 1,216,692 entries
-    Average: 8.807435 moves
+    Total: 5,213,912 entries
+    Average: 9.721709 moves
 
-    This is building to 11-deep on LJs machine
+    There is no need to build this any deeper...that and building it
+    to 10-deep took about 2 days on a 12-core machine.
     """
     def __init__(self, parent):
         LookupTable.__init__(
             self,
             parent,
-            'lookup-table-5x5x5-step105-stage-first-four-edges.txt',
+            'lookup-table-5x5x5-step100-stage-first-four-edges.txt',
             'TBD',
-            linecount=1216692)
+            linecount=5213912)
 
     def state(self, wing_strs_to_stage):
         state = self.parent.state[:]
@@ -1384,7 +831,7 @@ class LookupTable555StageFirstFourEdges(LookupTable):
 
 class LookupTable555StageSecondFourEdges(LookupTable):
     """
-    lookup-table-5x5x5-step106-stage-second-four-edges.txt
+    lookup-table-5x5x5-step101-stage-second-four-edges.txt
     ======================================================
     5 steps has 32 entries (0 percent, 0.00x previous step)
     6 steps has 304 entries (0 percent, 9.50x previous step)
@@ -1407,7 +854,7 @@ class LookupTable555StageSecondFourEdges(LookupTable):
         LookupTable.__init__(
             self,
             parent,
-            'lookup-table-5x5x5-step106-stage-second-four-edges.txt',
+            'lookup-table-5x5x5-step101-stage-second-four-edges.txt',
             'TBD',
             linecount=338122)
 
@@ -1434,7 +881,7 @@ class LookupTable555StageSecondFourEdges(LookupTable):
 
 class LookupTable555PairLastFourEdges(LookupTable):
     """
-    lookup-table-5x5x5-step103-pair-last-four-edges.txt
+    lookup-table-5x5x5-step102-pair-last-four-edges.txt
     ===================================================
     5 steps has 10 entries (0 percent, 0.00x previous step)
     6 steps has 45 entries (0 percent, 4.50x previous step)
@@ -1454,7 +901,7 @@ class LookupTable555PairLastFourEdges(LookupTable):
         LookupTable.__init__(
             self,
             parent,
-            'lookup-table-5x5x5-step103-pair-last-four-edges.txt',
+            'lookup-table-5x5x5-step102-pair-last-four-edges.txt',
             'sSSTTtuUUVVv',
             linecount=40319)
 
@@ -1573,6 +1020,46 @@ class LookupTable555TCenterSolve(LookupTable):
         return result
 
 
+class LookupTable555LRTCenterSolve(LookupTable):
+    """
+    Only used by 7x7x7 to speed up its step80 IDA search
+
+    lookup-table-5x5x5-step40-LR-t-centers-solve.txt
+    ================================================
+    1 steps has 5 entries (7 percent, 0.00x previous step)
+    2 steps has 18 entries (25 percent, 3.60x previous step)
+    3 steps has 34 entries (48 percent, 1.89x previous step)
+    4 steps has 13 entries (18 percent, 0.38x previous step)
+
+    Total: 70 entries
+    Average: 2.785714 moves
+    """
+    def __init__(self, parent):
+        LookupTable.__init__(
+            self,
+            parent,
+            'lookup-table-5x5x5-step40-LR-t-centers-solve.txt',
+            'LLLLRRRR',
+            linecount=70)
+
+    def state(self):
+        parent_state = self.parent.state
+        result = [
+            # Left
+            parent_state[33],
+            parent_state[37], parent_state[39],
+            parent_state[43],
+
+            # Right
+            parent_state[83],
+            parent_state[87], parent_state[89],
+            parent_state[93],
+        ]
+
+        result = ''.join(result)
+        return result
+
+
 class RubiksCube555(RubiksCube):
     """
     5x5x5 strategy
@@ -1618,48 +1105,13 @@ class RubiksCube555(RubiksCube):
         return self._phase
 
     def sanity_check(self):
-        edge_orbit_0 = (2, 4, 10, 20, 24, 22, 16, 6,
-                        27, 29, 35, 45, 49, 47, 41, 31,
-                        52, 54, 60, 70, 74, 72, 66, 56,
-                        77, 79, 85, 95, 99, 97, 91, 81,
-                        102, 104, 110, 120, 124, 122, 116, 106,
-                        127, 129, 135, 145, 149, 147, 141, 131)
-
-        edge_orbit_1 = (3, 15, 23, 11,
-                        28, 40, 48, 36,
-                        53, 65, 73, 61,
-                        78, 90, 98, 86,
-                        103, 115, 123, 111,
-                        128, 140, 148, 136)
-
-        corners = (1, 5, 21, 25,
-                   26, 30, 46, 50,
-                   51, 55, 71, 75,
-                   76, 80, 96, 100,
-                   101, 105, 121, 125,
-                   126, 130, 146, 150)
-
-        x_centers = (7, 9, 17, 19,
-                     32, 34, 42, 44,
-                     57, 59, 67, 69,
-                     82, 84, 92, 94,
-                     107, 109, 117, 119,
-                     132, 134, 142, 144)
-
-        t_centers = (8, 12, 14, 18,
-                     33, 37, 39, 43,
-                     58, 62, 64, 68,
-                     83, 87, 89, 93,
-                     108, 112, 114, 118,
-                     133, 137, 139, 143)
-
         centers = (13, 38, 63, 88, 113, 138)
 
-        self._sanity_check('edge-orbit-0', edge_orbit_0, 8)
-        self._sanity_check('edge-orbit-1', edge_orbit_1, 4)
-        self._sanity_check('corners', corners, 4)
-        self._sanity_check('x-centers', x_centers, 4)
-        self._sanity_check('t-centers', t_centers, 4)
+        self._sanity_check('edge-orbit-0', edge_orbit_0_555, 8)
+        self._sanity_check('edge-orbit-1', edge_orbit_1_555, 4)
+        self._sanity_check('corners', corners_555, 4)
+        self._sanity_check('x-centers', x_centers_555, 4)
+        self._sanity_check('t-centers', t_centers_555, 4)
         self._sanity_check('centers', centers, 1)
 
     def rotate(self, step):
@@ -1676,23 +1128,12 @@ class RubiksCube555(RubiksCube):
             return
         self.lt_init_called = True
 
-        # experiment
-        '''
-        self.lt_UD_T_centers_stage = LookupTable555UDTCenterStage(self)
-        self.lt_UD_X_centers_stage = LookupTable555UDXCenterStage(self)
-        self.lt_LR_T_centers_stage = LookupTable555LRTCenterStage(self)
-        self.lt_LR_X_centers_stage = LookupTable555LRXCenterStage(self)
-        self.lt_FB_T_centers_stage = LookupTable555FBTCenterStage(self)
-        self.lt_FB_X_centers_stage = LookupTable555FBXCenterStage(self)
-        self.lt_ALL_enters_stage = LookupTableIDA555AllCenterStage(self)
-        '''
-
-        self.lt_UD_T_centers_stage = LookupTable555UDTCenterStage(self)
-        self.lt_UD_X_centers_stage = LookupTable555UDXCenterStage(self)
+        # 50 cubes took 2m 10s without CostOnly
+        # 50 cubes took 1m 33s with CostOnly
+        self.lt_UD_T_centers_stage = LookupTable555UDTCenterStageCostOnly(self)
+        self.lt_UD_X_centers_stage = LookupTable555UDXCenterStageCostOnly(self)
         self.lt_UD_centers_stage = LookupTableIDA555UDCentersStage(self)
 
-        self.lt_LR_centers_stage_x_center_only = LookupTable555LRXCentersStage(self)
-        self.lt_LR_centers_stage_t_center_only = LookupTable555LRTCentersStage(self)
         self.lt_LR_centers_stage = LookupTableIDA555LRCentersStage(self)
 
         #self.lt_tsai_phase2_edges_orient = LookupTable555TsaiPhase2EdgesOrient(self)
@@ -1709,6 +1150,8 @@ class RubiksCube555(RubiksCube):
         self.lt_edges_pair_last_four = LookupTable555PairLastFourEdges(self)
 
         self.lt_ULFRBD_t_centers_solve = LookupTable555TCenterSolve(self)
+
+        self.lt_LR_t_centers_solve = LookupTable555LRTCenterSolve(self)
 
     def high_low_state(self, x, y, state_x, state_y, wing_str):
         """
@@ -1963,8 +1406,14 @@ class RubiksCube555(RubiksCube):
         """
         self.rotate_U_to_U()
         self.rotate_F_to_F()
+
+        # Test the prune tables
+        #self.lt_UD_T_centers_stage.solve()
+        #self.lt_UD_X_centers_stage.solve()
+
         self.lt_UD_centers_stage.solve()
-        log.info("UD centers staged, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
+        #self.print_cube()
+        log.info("%s: UD centers staged, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
 
     def group_centers_stage_LR(self):
         """
@@ -1975,10 +1424,12 @@ class RubiksCube555(RubiksCube):
         self.rotate_F_to_F()
 
         self.lt_LR_centers_stage.solve()
-        log.info("ULFRBD centers staged, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
+        #self.print_cube()
+        log.info("%s: ULFRBD centers staged, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
 
     def group_centers_guts(self):
         self.lt_init()
+
         self.group_centers_stage_UD()
         self.group_centers_stage_LR()
 
@@ -2013,7 +1464,7 @@ class RubiksCube555(RubiksCube):
         else:
             # All centers are staged, solve them
             self.lt_ULFRB_centers_solve.solve()
-            log.info("ULFRBD centers solved, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
+            log.info("%s: ULFRBD centers solved, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
             log.info("kociemba: %s" % self.get_kociemba_string(True))
 
     def stage_first_four_edges_555(self):
@@ -2021,6 +1472,12 @@ class RubiksCube555(RubiksCube):
         There are 495 different permutations of 4-edges out of 12-edges, use the one
         that gives us the shortest solution for getting 4-edges staged to LB, LF, RF, RB
         """
+
+        # return if they are already paired
+        if (self.sideL.west_edge_paired() and self.sideL.east_edge_paired and
+            self.sideR.west_edge_paired() and self.sideR.east_edge_paired):
+            return
+
         min_solution_len = None
         min_solution_steps = None
         min_solution_wing_strs = None
@@ -2132,6 +1589,11 @@ class RubiksCube555(RubiksCube):
         steps that will be needed in solve_staged_edges_555().
         """
 
+        # return if they are already paired
+        if (self.sideU.north_edge_paired() and self.sideU.south_edge_paired and
+            self.sideD.north_edge_paired() and self.sideD.south_edge_paired):
+            return
+
         # Remember what things looked like
         original_state = self.state[:]
         original_solution = self.solution[:]
@@ -2150,13 +1612,13 @@ class RubiksCube555(RubiksCube):
             steps = self.lt_edges_stage_second_four.steps(state)
 
             if steps:
-                log.info("%s: second four %s can be staged in %d steps" % (self, wing_strs, len(steps)))
 
                 for step in steps:
                     self.rotate(step)
 
                 self.solve_staged_edges_555(False)
                 solution_len = self.get_solution_len_minus_rotates(self.solution)
+                log.info("%s: second four %s can be staged in %d steps (edges pair in %d steps)" % (self, wing_strs, len(steps), solution_len))
 
                 if min_solution_len is None or solution_len < min_solution_len:
                     min_solution_len = solution_len
@@ -2168,6 +1630,7 @@ class RubiksCube555(RubiksCube):
 
         self.state = original_state[:]
         self.solution = original_solution[:]
+
 
         if min_solution_len is None:
             raise SolveError("Could not find 4-edges to stage")
@@ -2236,7 +1699,7 @@ class RubiksCube555(RubiksCube):
         self.lt_edges_pair_last_four.solve()
 
         if log_msgs:
-            #self.print_cube()
+            self.print_cube()
             log.info("%s: all edges paired, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
 
     def group_edges(self):
@@ -2247,7 +1710,7 @@ class RubiksCube555(RubiksCube):
 
         self.lt_init()
 
-        self.print_cube()
+        #self.print_cube()
         self.stage_first_four_edges_555()
         self.print_cube()
         log.info("%s: first four edges staged, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
@@ -3418,6 +2881,679 @@ tsai_phase2_orient_edges_555 = {
     (149, 122, 'U', 'L'): 'U',
     (149, 122, 'U', 'R'): 'U'
 }
+
+stage_first_four_edges_wing_str_combos = (
+    ('BD', 'BL', 'BR', 'BU'),
+    ('BD', 'BL', 'BR', 'DF'),
+    ('BD', 'BL', 'BR', 'DL'),
+    ('BD', 'BL', 'BR', 'DR'),
+    ('BD', 'BL', 'BR', 'FL'),
+    ('BD', 'BL', 'BR', 'FR'),
+    ('BD', 'BL', 'BR', 'FU'),
+    ('BD', 'BL', 'BR', 'LU'),
+    ('BD', 'BL', 'BR', 'RU'),
+    ('BD', 'BL', 'BU', 'DF'),
+    ('BD', 'BL', 'BU', 'DL'),
+    ('BD', 'BL', 'BU', 'DR'),
+    ('BD', 'BL', 'BU', 'FL'),
+    ('BD', 'BL', 'BU', 'FR'),
+    ('BD', 'BL', 'BU', 'FU'),
+    ('BD', 'BL', 'BU', 'LU'),
+    ('BD', 'BL', 'BU', 'RU'),
+    ('BD', 'BL', 'DF', 'DL'),
+    ('BD', 'BL', 'DF', 'DR'),
+    ('BD', 'BL', 'DF', 'FL'),
+    ('BD', 'BL', 'DF', 'FR'),
+    ('BD', 'BL', 'DF', 'FU'),
+    ('BD', 'BL', 'DF', 'LU'),
+    ('BD', 'BL', 'DF', 'RU'),
+    ('BD', 'BL', 'DL', 'DR'),
+    ('BD', 'BL', 'DL', 'FL'),
+    ('BD', 'BL', 'DL', 'FR'),
+    ('BD', 'BL', 'DL', 'FU'),
+    ('BD', 'BL', 'DL', 'LU'),
+    ('BD', 'BL', 'DL', 'RU'),
+    ('BD', 'BL', 'DR', 'FL'),
+    ('BD', 'BL', 'DR', 'FR'),
+    ('BD', 'BL', 'DR', 'FU'),
+    ('BD', 'BL', 'DR', 'LU'),
+    ('BD', 'BL', 'DR', 'RU'),
+    ('BD', 'BL', 'FL', 'FR'),
+    ('BD', 'BL', 'FL', 'FU'),
+    ('BD', 'BL', 'FL', 'LU'),
+    ('BD', 'BL', 'FL', 'RU'),
+    ('BD', 'BL', 'FR', 'FU'),
+    ('BD', 'BL', 'FR', 'LU'),
+    ('BD', 'BL', 'FR', 'RU'),
+    ('BD', 'BL', 'FU', 'LU'),
+    ('BD', 'BL', 'FU', 'RU'),
+    ('BD', 'BL', 'LU', 'RU'),
+    ('BD', 'BR', 'BU', 'DF'),
+    ('BD', 'BR', 'BU', 'DL'),
+    ('BD', 'BR', 'BU', 'DR'),
+    ('BD', 'BR', 'BU', 'FL'),
+    ('BD', 'BR', 'BU', 'FR'),
+    ('BD', 'BR', 'BU', 'FU'),
+    ('BD', 'BR', 'BU', 'LU'),
+    ('BD', 'BR', 'BU', 'RU'),
+    ('BD', 'BR', 'DF', 'DL'),
+    ('BD', 'BR', 'DF', 'DR'),
+    ('BD', 'BR', 'DF', 'FL'),
+    ('BD', 'BR', 'DF', 'FR'),
+    ('BD', 'BR', 'DF', 'FU'),
+    ('BD', 'BR', 'DF', 'LU'),
+    ('BD', 'BR', 'DF', 'RU'),
+    ('BD', 'BR', 'DL', 'DR'),
+    ('BD', 'BR', 'DL', 'FL'),
+    ('BD', 'BR', 'DL', 'FR'),
+    ('BD', 'BR', 'DL', 'FU'),
+    ('BD', 'BR', 'DL', 'LU'),
+    ('BD', 'BR', 'DL', 'RU'),
+    ('BD', 'BR', 'DR', 'FL'),
+    ('BD', 'BR', 'DR', 'FR'),
+    ('BD', 'BR', 'DR', 'FU'),
+    ('BD', 'BR', 'DR', 'LU'),
+    ('BD', 'BR', 'DR', 'RU'),
+    ('BD', 'BR', 'FL', 'FR'),
+    ('BD', 'BR', 'FL', 'FU'),
+    ('BD', 'BR', 'FL', 'LU'),
+    ('BD', 'BR', 'FL', 'RU'),
+    ('BD', 'BR', 'FR', 'FU'),
+    ('BD', 'BR', 'FR', 'LU'),
+    ('BD', 'BR', 'FR', 'RU'),
+    ('BD', 'BR', 'FU', 'LU'),
+    ('BD', 'BR', 'FU', 'RU'),
+    ('BD', 'BR', 'LU', 'RU'),
+    ('BD', 'BU', 'DF', 'DL'),
+    ('BD', 'BU', 'DF', 'DR'),
+    ('BD', 'BU', 'DF', 'FL'),
+    ('BD', 'BU', 'DF', 'FR'),
+    ('BD', 'BU', 'DF', 'FU'),
+    ('BD', 'BU', 'DF', 'LU'),
+    ('BD', 'BU', 'DF', 'RU'),
+    ('BD', 'BU', 'DL', 'DR'),
+    ('BD', 'BU', 'DL', 'FL'),
+    ('BD', 'BU', 'DL', 'FR'),
+    ('BD', 'BU', 'DL', 'FU'),
+    ('BD', 'BU', 'DL', 'LU'),
+    ('BD', 'BU', 'DL', 'RU'),
+    ('BD', 'BU', 'DR', 'FL'),
+    ('BD', 'BU', 'DR', 'FR'),
+    ('BD', 'BU', 'DR', 'FU'),
+    ('BD', 'BU', 'DR', 'LU'),
+    ('BD', 'BU', 'DR', 'RU'),
+    ('BD', 'BU', 'FL', 'FR'),
+    ('BD', 'BU', 'FL', 'FU'),
+    ('BD', 'BU', 'FL', 'LU'),
+    ('BD', 'BU', 'FL', 'RU'),
+    ('BD', 'BU', 'FR', 'FU'),
+    ('BD', 'BU', 'FR', 'LU'),
+    ('BD', 'BU', 'FR', 'RU'),
+    ('BD', 'BU', 'FU', 'LU'),
+    ('BD', 'BU', 'FU', 'RU'),
+    ('BD', 'BU', 'LU', 'RU'),
+    ('BD', 'DF', 'DL', 'DR'),
+    ('BD', 'DF', 'DL', 'FL'),
+    ('BD', 'DF', 'DL', 'FR'),
+    ('BD', 'DF', 'DL', 'FU'),
+    ('BD', 'DF', 'DL', 'LU'),
+    ('BD', 'DF', 'DL', 'RU'),
+    ('BD', 'DF', 'DR', 'FL'),
+    ('BD', 'DF', 'DR', 'FR'),
+    ('BD', 'DF', 'DR', 'FU'),
+    ('BD', 'DF', 'DR', 'LU'),
+    ('BD', 'DF', 'DR', 'RU'),
+    ('BD', 'DF', 'FL', 'FR'),
+    ('BD', 'DF', 'FL', 'FU'),
+    ('BD', 'DF', 'FL', 'LU'),
+    ('BD', 'DF', 'FL', 'RU'),
+    ('BD', 'DF', 'FR', 'FU'),
+    ('BD', 'DF', 'FR', 'LU'),
+    ('BD', 'DF', 'FR', 'RU'),
+    ('BD', 'DF', 'FU', 'LU'),
+    ('BD', 'DF', 'FU', 'RU'),
+    ('BD', 'DF', 'LU', 'RU'),
+    ('BD', 'DL', 'DR', 'FL'),
+    ('BD', 'DL', 'DR', 'FR'),
+    ('BD', 'DL', 'DR', 'FU'),
+    ('BD', 'DL', 'DR', 'LU'),
+    ('BD', 'DL', 'DR', 'RU'),
+    ('BD', 'DL', 'FL', 'FR'),
+    ('BD', 'DL', 'FL', 'FU'),
+    ('BD', 'DL', 'FL', 'LU'),
+    ('BD', 'DL', 'FL', 'RU'),
+    ('BD', 'DL', 'FR', 'FU'),
+    ('BD', 'DL', 'FR', 'LU'),
+    ('BD', 'DL', 'FR', 'RU'),
+    ('BD', 'DL', 'FU', 'LU'),
+    ('BD', 'DL', 'FU', 'RU'),
+    ('BD', 'DL', 'LU', 'RU'),
+    ('BD', 'DR', 'FL', 'FR'),
+    ('BD', 'DR', 'FL', 'FU'),
+    ('BD', 'DR', 'FL', 'LU'),
+    ('BD', 'DR', 'FL', 'RU'),
+    ('BD', 'DR', 'FR', 'FU'),
+    ('BD', 'DR', 'FR', 'LU'),
+    ('BD', 'DR', 'FR', 'RU'),
+    ('BD', 'DR', 'FU', 'LU'),
+    ('BD', 'DR', 'FU', 'RU'),
+    ('BD', 'DR', 'LU', 'RU'),
+    ('BD', 'FL', 'FR', 'FU'),
+    ('BD', 'FL', 'FR', 'LU'),
+    ('BD', 'FL', 'FR', 'RU'),
+    ('BD', 'FL', 'FU', 'LU'),
+    ('BD', 'FL', 'FU', 'RU'),
+    ('BD', 'FL', 'LU', 'RU'),
+    ('BD', 'FR', 'FU', 'LU'),
+    ('BD', 'FR', 'FU', 'RU'),
+    ('BD', 'FR', 'LU', 'RU'),
+    ('BD', 'FU', 'LU', 'RU'),
+    ('BL', 'BR', 'BU', 'DF'),
+    ('BL', 'BR', 'BU', 'DL'),
+    ('BL', 'BR', 'BU', 'DR'),
+    ('BL', 'BR', 'BU', 'FL'),
+    ('BL', 'BR', 'BU', 'FR'),
+    ('BL', 'BR', 'BU', 'FU'),
+    ('BL', 'BR', 'BU', 'LU'),
+    ('BL', 'BR', 'BU', 'RU'),
+    ('BL', 'BR', 'DF', 'DL'),
+    ('BL', 'BR', 'DF', 'DR'),
+    ('BL', 'BR', 'DF', 'FL'),
+    ('BL', 'BR', 'DF', 'FR'),
+    ('BL', 'BR', 'DF', 'FU'),
+    ('BL', 'BR', 'DF', 'LU'),
+    ('BL', 'BR', 'DF', 'RU'),
+    ('BL', 'BR', 'DL', 'DR'),
+    ('BL', 'BR', 'DL', 'FL'),
+    ('BL', 'BR', 'DL', 'FR'),
+    ('BL', 'BR', 'DL', 'FU'),
+    ('BL', 'BR', 'DL', 'LU'),
+    ('BL', 'BR', 'DL', 'RU'),
+    ('BL', 'BR', 'DR', 'FL'),
+    ('BL', 'BR', 'DR', 'FR'),
+    ('BL', 'BR', 'DR', 'FU'),
+    ('BL', 'BR', 'DR', 'LU'),
+    ('BL', 'BR', 'DR', 'RU'),
+    ('BL', 'BR', 'FL', 'FR'),
+    ('BL', 'BR', 'FL', 'FU'),
+    ('BL', 'BR', 'FL', 'LU'),
+    ('BL', 'BR', 'FL', 'RU'),
+    ('BL', 'BR', 'FR', 'FU'),
+    ('BL', 'BR', 'FR', 'LU'),
+    ('BL', 'BR', 'FR', 'RU'),
+    ('BL', 'BR', 'FU', 'LU'),
+    ('BL', 'BR', 'FU', 'RU'),
+    ('BL', 'BR', 'LU', 'RU'),
+    ('BL', 'BU', 'DF', 'DL'),
+    ('BL', 'BU', 'DF', 'DR'),
+    ('BL', 'BU', 'DF', 'FL'),
+    ('BL', 'BU', 'DF', 'FR'),
+    ('BL', 'BU', 'DF', 'FU'),
+    ('BL', 'BU', 'DF', 'LU'),
+    ('BL', 'BU', 'DF', 'RU'),
+    ('BL', 'BU', 'DL', 'DR'),
+    ('BL', 'BU', 'DL', 'FL'),
+    ('BL', 'BU', 'DL', 'FR'),
+    ('BL', 'BU', 'DL', 'FU'),
+    ('BL', 'BU', 'DL', 'LU'),
+    ('BL', 'BU', 'DL', 'RU'),
+    ('BL', 'BU', 'DR', 'FL'),
+    ('BL', 'BU', 'DR', 'FR'),
+    ('BL', 'BU', 'DR', 'FU'),
+    ('BL', 'BU', 'DR', 'LU'),
+    ('BL', 'BU', 'DR', 'RU'),
+    ('BL', 'BU', 'FL', 'FR'),
+    ('BL', 'BU', 'FL', 'FU'),
+    ('BL', 'BU', 'FL', 'LU'),
+    ('BL', 'BU', 'FL', 'RU'),
+    ('BL', 'BU', 'FR', 'FU'),
+    ('BL', 'BU', 'FR', 'LU'),
+    ('BL', 'BU', 'FR', 'RU'),
+    ('BL', 'BU', 'FU', 'LU'),
+    ('BL', 'BU', 'FU', 'RU'),
+    ('BL', 'BU', 'LU', 'RU'),
+    ('BL', 'DF', 'DL', 'DR'),
+    ('BL', 'DF', 'DL', 'FL'),
+    ('BL', 'DF', 'DL', 'FR'),
+    ('BL', 'DF', 'DL', 'FU'),
+    ('BL', 'DF', 'DL', 'LU'),
+    ('BL', 'DF', 'DL', 'RU'),
+    ('BL', 'DF', 'DR', 'FL'),
+    ('BL', 'DF', 'DR', 'FR'),
+    ('BL', 'DF', 'DR', 'FU'),
+    ('BL', 'DF', 'DR', 'LU'),
+    ('BL', 'DF', 'DR', 'RU'),
+    ('BL', 'DF', 'FL', 'FR'),
+    ('BL', 'DF', 'FL', 'FU'),
+    ('BL', 'DF', 'FL', 'LU'),
+    ('BL', 'DF', 'FL', 'RU'),
+    ('BL', 'DF', 'FR', 'FU'),
+    ('BL', 'DF', 'FR', 'LU'),
+    ('BL', 'DF', 'FR', 'RU'),
+    ('BL', 'DF', 'FU', 'LU'),
+    ('BL', 'DF', 'FU', 'RU'),
+    ('BL', 'DF', 'LU', 'RU'),
+    ('BL', 'DL', 'DR', 'FL'),
+    ('BL', 'DL', 'DR', 'FR'),
+    ('BL', 'DL', 'DR', 'FU'),
+    ('BL', 'DL', 'DR', 'LU'),
+    ('BL', 'DL', 'DR', 'RU'),
+    ('BL', 'DL', 'FL', 'FR'),
+    ('BL', 'DL', 'FL', 'FU'),
+    ('BL', 'DL', 'FL', 'LU'),
+    ('BL', 'DL', 'FL', 'RU'),
+    ('BL', 'DL', 'FR', 'FU'),
+    ('BL', 'DL', 'FR', 'LU'),
+    ('BL', 'DL', 'FR', 'RU'),
+    ('BL', 'DL', 'FU', 'LU'),
+    ('BL', 'DL', 'FU', 'RU'),
+    ('BL', 'DL', 'LU', 'RU'),
+    ('BL', 'DR', 'FL', 'FR'),
+    ('BL', 'DR', 'FL', 'FU'),
+    ('BL', 'DR', 'FL', 'LU'),
+    ('BL', 'DR', 'FL', 'RU'),
+    ('BL', 'DR', 'FR', 'FU'),
+    ('BL', 'DR', 'FR', 'LU'),
+    ('BL', 'DR', 'FR', 'RU'),
+    ('BL', 'DR', 'FU', 'LU'),
+    ('BL', 'DR', 'FU', 'RU'),
+    ('BL', 'DR', 'LU', 'RU'),
+    ('BL', 'FL', 'FR', 'FU'),
+    ('BL', 'FL', 'FR', 'LU'),
+    ('BL', 'FL', 'FR', 'RU'),
+    ('BL', 'FL', 'FU', 'LU'),
+    ('BL', 'FL', 'FU', 'RU'),
+    ('BL', 'FL', 'LU', 'RU'),
+    ('BL', 'FR', 'FU', 'LU'),
+    ('BL', 'FR', 'FU', 'RU'),
+    ('BL', 'FR', 'LU', 'RU'),
+    ('BL', 'FU', 'LU', 'RU'),
+    ('BR', 'BU', 'DF', 'DL'),
+    ('BR', 'BU', 'DF', 'DR'),
+    ('BR', 'BU', 'DF', 'FL'),
+    ('BR', 'BU', 'DF', 'FR'),
+    ('BR', 'BU', 'DF', 'FU'),
+    ('BR', 'BU', 'DF', 'LU'),
+    ('BR', 'BU', 'DF', 'RU'),
+    ('BR', 'BU', 'DL', 'DR'),
+    ('BR', 'BU', 'DL', 'FL'),
+    ('BR', 'BU', 'DL', 'FR'),
+    ('BR', 'BU', 'DL', 'FU'),
+    ('BR', 'BU', 'DL', 'LU'),
+    ('BR', 'BU', 'DL', 'RU'),
+    ('BR', 'BU', 'DR', 'FL'),
+    ('BR', 'BU', 'DR', 'FR'),
+    ('BR', 'BU', 'DR', 'FU'),
+    ('BR', 'BU', 'DR', 'LU'),
+    ('BR', 'BU', 'DR', 'RU'),
+    ('BR', 'BU', 'FL', 'FR'),
+    ('BR', 'BU', 'FL', 'FU'),
+    ('BR', 'BU', 'FL', 'LU'),
+    ('BR', 'BU', 'FL', 'RU'),
+    ('BR', 'BU', 'FR', 'FU'),
+    ('BR', 'BU', 'FR', 'LU'),
+    ('BR', 'BU', 'FR', 'RU'),
+    ('BR', 'BU', 'FU', 'LU'),
+    ('BR', 'BU', 'FU', 'RU'),
+    ('BR', 'BU', 'LU', 'RU'),
+    ('BR', 'DF', 'DL', 'DR'),
+    ('BR', 'DF', 'DL', 'FL'),
+    ('BR', 'DF', 'DL', 'FR'),
+    ('BR', 'DF', 'DL', 'FU'),
+    ('BR', 'DF', 'DL', 'LU'),
+    ('BR', 'DF', 'DL', 'RU'),
+    ('BR', 'DF', 'DR', 'FL'),
+    ('BR', 'DF', 'DR', 'FR'),
+    ('BR', 'DF', 'DR', 'FU'),
+    ('BR', 'DF', 'DR', 'LU'),
+    ('BR', 'DF', 'DR', 'RU'),
+    ('BR', 'DF', 'FL', 'FR'),
+    ('BR', 'DF', 'FL', 'FU'),
+    ('BR', 'DF', 'FL', 'LU'),
+    ('BR', 'DF', 'FL', 'RU'),
+    ('BR', 'DF', 'FR', 'FU'),
+    ('BR', 'DF', 'FR', 'LU'),
+    ('BR', 'DF', 'FR', 'RU'),
+    ('BR', 'DF', 'FU', 'LU'),
+    ('BR', 'DF', 'FU', 'RU'),
+    ('BR', 'DF', 'LU', 'RU'),
+    ('BR', 'DL', 'DR', 'FL'),
+    ('BR', 'DL', 'DR', 'FR'),
+    ('BR', 'DL', 'DR', 'FU'),
+    ('BR', 'DL', 'DR', 'LU'),
+    ('BR', 'DL', 'DR', 'RU'),
+    ('BR', 'DL', 'FL', 'FR'),
+    ('BR', 'DL', 'FL', 'FU'),
+    ('BR', 'DL', 'FL', 'LU'),
+    ('BR', 'DL', 'FL', 'RU'),
+    ('BR', 'DL', 'FR', 'FU'),
+    ('BR', 'DL', 'FR', 'LU'),
+    ('BR', 'DL', 'FR', 'RU'),
+    ('BR', 'DL', 'FU', 'LU'),
+    ('BR', 'DL', 'FU', 'RU'),
+    ('BR', 'DL', 'LU', 'RU'),
+    ('BR', 'DR', 'FL', 'FR'),
+    ('BR', 'DR', 'FL', 'FU'),
+    ('BR', 'DR', 'FL', 'LU'),
+    ('BR', 'DR', 'FL', 'RU'),
+    ('BR', 'DR', 'FR', 'FU'),
+    ('BR', 'DR', 'FR', 'LU'),
+    ('BR', 'DR', 'FR', 'RU'),
+    ('BR', 'DR', 'FU', 'LU'),
+    ('BR', 'DR', 'FU', 'RU'),
+    ('BR', 'DR', 'LU', 'RU'),
+    ('BR', 'FL', 'FR', 'FU'),
+    ('BR', 'FL', 'FR', 'LU'),
+    ('BR', 'FL', 'FR', 'RU'),
+    ('BR', 'FL', 'FU', 'LU'),
+    ('BR', 'FL', 'FU', 'RU'),
+    ('BR', 'FL', 'LU', 'RU'),
+    ('BR', 'FR', 'FU', 'LU'),
+    ('BR', 'FR', 'FU', 'RU'),
+    ('BR', 'FR', 'LU', 'RU'),
+    ('BR', 'FU', 'LU', 'RU'),
+    ('BU', 'DF', 'DL', 'DR'),
+    ('BU', 'DF', 'DL', 'FL'),
+    ('BU', 'DF', 'DL', 'FR'),
+    ('BU', 'DF', 'DL', 'FU'),
+    ('BU', 'DF', 'DL', 'LU'),
+    ('BU', 'DF', 'DL', 'RU'),
+    ('BU', 'DF', 'DR', 'FL'),
+    ('BU', 'DF', 'DR', 'FR'),
+    ('BU', 'DF', 'DR', 'FU'),
+    ('BU', 'DF', 'DR', 'LU'),
+    ('BU', 'DF', 'DR', 'RU'),
+    ('BU', 'DF', 'FL', 'FR'),
+    ('BU', 'DF', 'FL', 'FU'),
+    ('BU', 'DF', 'FL', 'LU'),
+    ('BU', 'DF', 'FL', 'RU'),
+    ('BU', 'DF', 'FR', 'FU'),
+    ('BU', 'DF', 'FR', 'LU'),
+    ('BU', 'DF', 'FR', 'RU'),
+    ('BU', 'DF', 'FU', 'LU'),
+    ('BU', 'DF', 'FU', 'RU'),
+    ('BU', 'DF', 'LU', 'RU'),
+    ('BU', 'DL', 'DR', 'FL'),
+    ('BU', 'DL', 'DR', 'FR'),
+    ('BU', 'DL', 'DR', 'FU'),
+    ('BU', 'DL', 'DR', 'LU'),
+    ('BU', 'DL', 'DR', 'RU'),
+    ('BU', 'DL', 'FL', 'FR'),
+    ('BU', 'DL', 'FL', 'FU'),
+    ('BU', 'DL', 'FL', 'LU'),
+    ('BU', 'DL', 'FL', 'RU'),
+    ('BU', 'DL', 'FR', 'FU'),
+    ('BU', 'DL', 'FR', 'LU'),
+    ('BU', 'DL', 'FR', 'RU'),
+    ('BU', 'DL', 'FU', 'LU'),
+    ('BU', 'DL', 'FU', 'RU'),
+    ('BU', 'DL', 'LU', 'RU'),
+    ('BU', 'DR', 'FL', 'FR'),
+    ('BU', 'DR', 'FL', 'FU'),
+    ('BU', 'DR', 'FL', 'LU'),
+    ('BU', 'DR', 'FL', 'RU'),
+    ('BU', 'DR', 'FR', 'FU'),
+    ('BU', 'DR', 'FR', 'LU'),
+    ('BU', 'DR', 'FR', 'RU'),
+    ('BU', 'DR', 'FU', 'LU'),
+    ('BU', 'DR', 'FU', 'RU'),
+    ('BU', 'DR', 'LU', 'RU'),
+    ('BU', 'FL', 'FR', 'FU'),
+    ('BU', 'FL', 'FR', 'LU'),
+    ('BU', 'FL', 'FR', 'RU'),
+    ('BU', 'FL', 'FU', 'LU'),
+    ('BU', 'FL', 'FU', 'RU'),
+    ('BU', 'FL', 'LU', 'RU'),
+    ('BU', 'FR', 'FU', 'LU'),
+    ('BU', 'FR', 'FU', 'RU'),
+    ('BU', 'FR', 'LU', 'RU'),
+    ('BU', 'FU', 'LU', 'RU'),
+    ('DF', 'DL', 'DR', 'FL'),
+    ('DF', 'DL', 'DR', 'FR'),
+    ('DF', 'DL', 'DR', 'FU'),
+    ('DF', 'DL', 'DR', 'LU'),
+    ('DF', 'DL', 'DR', 'RU'),
+    ('DF', 'DL', 'FL', 'FR'),
+    ('DF', 'DL', 'FL', 'FU'),
+    ('DF', 'DL', 'FL', 'LU'),
+    ('DF', 'DL', 'FL', 'RU'),
+    ('DF', 'DL', 'FR', 'FU'),
+    ('DF', 'DL', 'FR', 'LU'),
+    ('DF', 'DL', 'FR', 'RU'),
+    ('DF', 'DL', 'FU', 'LU'),
+    ('DF', 'DL', 'FU', 'RU'),
+    ('DF', 'DL', 'LU', 'RU'),
+    ('DF', 'DR', 'FL', 'FR'),
+    ('DF', 'DR', 'FL', 'FU'),
+    ('DF', 'DR', 'FL', 'LU'),
+    ('DF', 'DR', 'FL', 'RU'),
+    ('DF', 'DR', 'FR', 'FU'),
+    ('DF', 'DR', 'FR', 'LU'),
+    ('DF', 'DR', 'FR', 'RU'),
+    ('DF', 'DR', 'FU', 'LU'),
+    ('DF', 'DR', 'FU', 'RU'),
+    ('DF', 'DR', 'LU', 'RU'),
+    ('DF', 'FL', 'FR', 'FU'),
+    ('DF', 'FL', 'FR', 'LU'),
+    ('DF', 'FL', 'FR', 'RU'),
+    ('DF', 'FL', 'FU', 'LU'),
+    ('DF', 'FL', 'FU', 'RU'),
+    ('DF', 'FL', 'LU', 'RU'),
+    ('DF', 'FR', 'FU', 'LU'),
+    ('DF', 'FR', 'FU', 'RU'),
+    ('DF', 'FR', 'LU', 'RU'),
+    ('DF', 'FU', 'LU', 'RU'),
+    ('DL', 'DR', 'FL', 'FR'),
+    ('DL', 'DR', 'FL', 'FU'),
+    ('DL', 'DR', 'FL', 'LU'),
+    ('DL', 'DR', 'FL', 'RU'),
+    ('DL', 'DR', 'FR', 'FU'),
+    ('DL', 'DR', 'FR', 'LU'),
+    ('DL', 'DR', 'FR', 'RU'),
+    ('DL', 'DR', 'FU', 'LU'),
+    ('DL', 'DR', 'FU', 'RU'),
+    ('DL', 'DR', 'LU', 'RU'),
+    ('DL', 'FL', 'FR', 'FU'),
+    ('DL', 'FL', 'FR', 'LU'),
+    ('DL', 'FL', 'FR', 'RU'),
+    ('DL', 'FL', 'FU', 'LU'),
+    ('DL', 'FL', 'FU', 'RU'),
+    ('DL', 'FL', 'LU', 'RU'),
+    ('DL', 'FR', 'FU', 'LU'),
+    ('DL', 'FR', 'FU', 'RU'),
+    ('DL', 'FR', 'LU', 'RU'),
+    ('DL', 'FU', 'LU', 'RU'),
+    ('DR', 'FL', 'FR', 'FU'),
+    ('DR', 'FL', 'FR', 'LU'),
+    ('DR', 'FL', 'FR', 'RU'),
+    ('DR', 'FL', 'FU', 'LU'),
+    ('DR', 'FL', 'FU', 'RU'),
+    ('DR', 'FL', 'LU', 'RU'),
+    ('DR', 'FR', 'FU', 'LU'),
+    ('DR', 'FR', 'FU', 'RU'),
+    ('DR', 'FR', 'LU', 'RU'),
+    ('DR', 'FU', 'LU', 'RU'),
+    ('FL', 'FR', 'FU', 'LU'),
+    ('FL', 'FR', 'FU', 'RU'),
+    ('FL', 'FR', 'LU', 'RU'),
+    ('FL', 'FU', 'LU', 'RU'),
+    ('FR', 'FU', 'LU', 'RU'),
+)
+
+
+def rotate_555_U(cube):
+    return [cube[0],cube[21],cube[16],cube[11],cube[6],cube[1],cube[22],cube[17],cube[12],cube[7],cube[2],cube[23],cube[18],cube[13],cube[8],cube[3],cube[24],cube[19],cube[14],cube[9],cube[4],cube[25],cube[20],cube[15],cube[10],cube[5]] + cube[51:56] + cube[31:51] + cube[76:81] + cube[56:76] + cube[101:106] + cube[81:101] + cube[26:31] + cube[106:151]
+
+def rotate_555_U_prime(cube):
+    return [cube[0],cube[5],cube[10],cube[15],cube[20],cube[25],cube[4],cube[9],cube[14],cube[19],cube[24],cube[3],cube[8],cube[13],cube[18],cube[23],cube[2],cube[7],cube[12],cube[17],cube[22],cube[1],cube[6],cube[11],cube[16],cube[21]] + cube[101:106] + cube[31:51] + cube[26:31] + cube[56:76] + cube[51:56] + cube[81:101] + cube[76:81] + cube[106:151]
+
+def rotate_555_U2(cube):
+    return [cube[0],cube[25],cube[24],cube[23],cube[22],cube[21],cube[20],cube[19],cube[18],cube[17],cube[16],cube[15],cube[14],cube[13],cube[12],cube[11],cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1]] + cube[76:81] + cube[31:51] + cube[101:106] + cube[56:76] + cube[26:31] + cube[81:101] + cube[51:56] + cube[106:151]
+
+def rotate_555_Uw(cube):
+    return [cube[0],cube[21],cube[16],cube[11],cube[6],cube[1],cube[22],cube[17],cube[12],cube[7],cube[2],cube[23],cube[18],cube[13],cube[8],cube[3],cube[24],cube[19],cube[14],cube[9],cube[4],cube[25],cube[20],cube[15],cube[10],cube[5]] + cube[51:61] + cube[36:51] + cube[76:86] + cube[61:76] + cube[101:111] + cube[86:101] + cube[26:36] + cube[111:151]
+
+def rotate_555_Uw_prime(cube):
+    return [cube[0],cube[5],cube[10],cube[15],cube[20],cube[25],cube[4],cube[9],cube[14],cube[19],cube[24],cube[3],cube[8],cube[13],cube[18],cube[23],cube[2],cube[7],cube[12],cube[17],cube[22],cube[1],cube[6],cube[11],cube[16],cube[21]] + cube[101:111] + cube[36:51] + cube[26:36] + cube[61:76] + cube[51:61] + cube[86:101] + cube[76:86] + cube[111:151]
+
+def rotate_555_Uw2(cube):
+    return [cube[0],cube[25],cube[24],cube[23],cube[22],cube[21],cube[20],cube[19],cube[18],cube[17],cube[16],cube[15],cube[14],cube[13],cube[12],cube[11],cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1]] + cube[76:86] + cube[36:51] + cube[101:111] + cube[61:76] + cube[26:36] + cube[86:101] + cube[51:61] + cube[111:151]
+
+def rotate_555_L(cube):
+    return [cube[0],cube[125]] + cube[2:6] + [cube[120]] + cube[7:11] + [cube[115]] + cube[12:16] + [cube[110]] + cube[17:21] + [cube[105]] + cube[22:26] + [cube[46],cube[41],cube[36],cube[31],cube[26],cube[47],cube[42],cube[37],cube[32],cube[27],cube[48],cube[43],cube[38],cube[33],cube[28],cube[49],cube[44],cube[39],cube[34],cube[29],cube[50],cube[45],cube[40],cube[35],cube[30],cube[1]] + cube[52:56] + [cube[6]] + cube[57:61] + [cube[11]] + cube[62:66] + [cube[16]] + cube[67:71] + [cube[21]] + cube[72:105] + [cube[146]] + cube[106:110] + [cube[141]] + cube[111:115] + [cube[136]] + cube[116:120] + [cube[131]] + cube[121:125] + [cube[126],cube[51]] + cube[127:131] + [cube[56]] + cube[132:136] + [cube[61]] + cube[137:141] + [cube[66]] + cube[142:146] + [cube[71]] + cube[147:151]
+
+def rotate_555_L_prime(cube):
+    return [cube[0],cube[51]] + cube[2:6] + [cube[56]] + cube[7:11] + [cube[61]] + cube[12:16] + [cube[66]] + cube[17:21] + [cube[71]] + cube[22:26] + [cube[30],cube[35],cube[40],cube[45],cube[50],cube[29],cube[34],cube[39],cube[44],cube[49],cube[28],cube[33],cube[38],cube[43],cube[48],cube[27],cube[32],cube[37],cube[42],cube[47],cube[26],cube[31],cube[36],cube[41],cube[46],cube[126]] + cube[52:56] + [cube[131]] + cube[57:61] + [cube[136]] + cube[62:66] + [cube[141]] + cube[67:71] + [cube[146]] + cube[72:105] + [cube[21]] + cube[106:110] + [cube[16]] + cube[111:115] + [cube[11]] + cube[116:120] + [cube[6]] + cube[121:125] + [cube[1],cube[125]] + cube[127:131] + [cube[120]] + cube[132:136] + [cube[115]] + cube[137:141] + [cube[110]] + cube[142:146] + [cube[105]] + cube[147:151]
+
+def rotate_555_L2(cube):
+    return [cube[0],cube[126]] + cube[2:6] + [cube[131]] + cube[7:11] + [cube[136]] + cube[12:16] + [cube[141]] + cube[17:21] + [cube[146]] + cube[22:26] + [cube[50],cube[49],cube[48],cube[47],cube[46],cube[45],cube[44],cube[43],cube[42],cube[41],cube[40],cube[39],cube[38],cube[37],cube[36],cube[35],cube[34],cube[33],cube[32],cube[31],cube[30],cube[29],cube[28],cube[27],cube[26],cube[125]] + cube[52:56] + [cube[120]] + cube[57:61] + [cube[115]] + cube[62:66] + [cube[110]] + cube[67:71] + [cube[105]] + cube[72:105] + [cube[71]] + cube[106:110] + [cube[66]] + cube[111:115] + [cube[61]] + cube[116:120] + [cube[56]] + cube[121:125] + [cube[51],cube[1]] + cube[127:131] + [cube[6]] + cube[132:136] + [cube[11]] + cube[137:141] + [cube[16]] + cube[142:146] + [cube[21]] + cube[147:151]
+
+def rotate_555_Lw(cube):
+    return [cube[0],cube[125],cube[124]] + cube[3:6] + [cube[120],cube[119]] + cube[8:11] + [cube[115],cube[114]] + cube[13:16] + [cube[110],cube[109]] + cube[18:21] + [cube[105],cube[104]] + cube[23:26] + [cube[46],cube[41],cube[36],cube[31],cube[26],cube[47],cube[42],cube[37],cube[32],cube[27],cube[48],cube[43],cube[38],cube[33],cube[28],cube[49],cube[44],cube[39],cube[34],cube[29],cube[50],cube[45],cube[40],cube[35],cube[30]] + cube[1:3] + cube[53:56] + cube[6:8] + cube[58:61] + cube[11:13] + cube[63:66] + cube[16:18] + cube[68:71] + cube[21:23] + cube[73:104] + [cube[147],cube[146]] + cube[106:109] + [cube[142],cube[141]] + cube[111:114] + [cube[137],cube[136]] + cube[116:119] + [cube[132],cube[131]] + cube[121:124] + [cube[127],cube[126]] + cube[51:53] + cube[128:131] + cube[56:58] + cube[133:136] + cube[61:63] + cube[138:141] + cube[66:68] + cube[143:146] + cube[71:73] + cube[148:151]
+
+def rotate_555_Lw_prime(cube):
+    return [cube[0]] + cube[51:53] + cube[3:6] + cube[56:58] + cube[8:11] + cube[61:63] + cube[13:16] + cube[66:68] + cube[18:21] + cube[71:73] + cube[23:26] + [cube[30],cube[35],cube[40],cube[45],cube[50],cube[29],cube[34],cube[39],cube[44],cube[49],cube[28],cube[33],cube[38],cube[43],cube[48],cube[27],cube[32],cube[37],cube[42],cube[47],cube[26],cube[31],cube[36],cube[41],cube[46]] + cube[126:128] + cube[53:56] + cube[131:133] + cube[58:61] + cube[136:138] + cube[63:66] + cube[141:143] + cube[68:71] + cube[146:148] + cube[73:104] + [cube[22],cube[21]] + cube[106:109] + [cube[17],cube[16]] + cube[111:114] + [cube[12],cube[11]] + cube[116:119] + [cube[7],cube[6]] + cube[121:124] + [cube[2],cube[1],cube[125],cube[124]] + cube[128:131] + [cube[120],cube[119]] + cube[133:136] + [cube[115],cube[114]] + cube[138:141] + [cube[110],cube[109]] + cube[143:146] + [cube[105],cube[104]] + cube[148:151]
+
+def rotate_555_Lw2(cube):
+    return [cube[0]] + cube[126:128] + cube[3:6] + cube[131:133] + cube[8:11] + cube[136:138] + cube[13:16] + cube[141:143] + cube[18:21] + cube[146:148] + cube[23:26] + [cube[50],cube[49],cube[48],cube[47],cube[46],cube[45],cube[44],cube[43],cube[42],cube[41],cube[40],cube[39],cube[38],cube[37],cube[36],cube[35],cube[34],cube[33],cube[32],cube[31],cube[30],cube[29],cube[28],cube[27],cube[26],cube[125],cube[124]] + cube[53:56] + [cube[120],cube[119]] + cube[58:61] + [cube[115],cube[114]] + cube[63:66] + [cube[110],cube[109]] + cube[68:71] + [cube[105],cube[104]] + cube[73:104] + [cube[72],cube[71]] + cube[106:109] + [cube[67],cube[66]] + cube[111:114] + [cube[62],cube[61]] + cube[116:119] + [cube[57],cube[56]] + cube[121:124] + [cube[52],cube[51]] + cube[1:3] + cube[128:131] + cube[6:8] + cube[133:136] + cube[11:13] + cube[138:141] + cube[16:18] + cube[143:146] + cube[21:23] + cube[148:151]
+
+def rotate_555_F(cube):
+    return cube[0:21] + [cube[50],cube[45],cube[40],cube[35],cube[30]] + cube[26:30] + [cube[126]] + cube[31:35] + [cube[127]] + cube[36:40] + [cube[128]] + cube[41:45] + [cube[129]] + cube[46:50] + [cube[130],cube[71],cube[66],cube[61],cube[56],cube[51],cube[72],cube[67],cube[62],cube[57],cube[52],cube[73],cube[68],cube[63],cube[58],cube[53],cube[74],cube[69],cube[64],cube[59],cube[54],cube[75],cube[70],cube[65],cube[60],cube[55],cube[21]] + cube[77:81] + [cube[22]] + cube[82:86] + [cube[23]] + cube[87:91] + [cube[24]] + cube[92:96] + [cube[25]] + cube[97:126] + [cube[96],cube[91],cube[86],cube[81],cube[76]] + cube[131:151]
+
+def rotate_555_F_prime(cube):
+    return cube[0:21] + [cube[76],cube[81],cube[86],cube[91],cube[96]] + cube[26:30] + [cube[25]] + cube[31:35] + [cube[24]] + cube[36:40] + [cube[23]] + cube[41:45] + [cube[22]] + cube[46:50] + [cube[21],cube[55],cube[60],cube[65],cube[70],cube[75],cube[54],cube[59],cube[64],cube[69],cube[74],cube[53],cube[58],cube[63],cube[68],cube[73],cube[52],cube[57],cube[62],cube[67],cube[72],cube[51],cube[56],cube[61],cube[66],cube[71],cube[130]] + cube[77:81] + [cube[129]] + cube[82:86] + [cube[128]] + cube[87:91] + [cube[127]] + cube[92:96] + [cube[126]] + cube[97:126] + [cube[30],cube[35],cube[40],cube[45],cube[50]] + cube[131:151]
+
+def rotate_555_F2(cube):
+    return cube[0:21] + [cube[130],cube[129],cube[128],cube[127],cube[126]] + cube[26:30] + [cube[96]] + cube[31:35] + [cube[91]] + cube[36:40] + [cube[86]] + cube[41:45] + [cube[81]] + cube[46:50] + [cube[76],cube[75],cube[74],cube[73],cube[72],cube[71],cube[70],cube[69],cube[68],cube[67],cube[66],cube[65],cube[64],cube[63],cube[62],cube[61],cube[60],cube[59],cube[58],cube[57],cube[56],cube[55],cube[54],cube[53],cube[52],cube[51],cube[50]] + cube[77:81] + [cube[45]] + cube[82:86] + [cube[40]] + cube[87:91] + [cube[35]] + cube[92:96] + [cube[30]] + cube[97:126] + [cube[25],cube[24],cube[23],cube[22],cube[21]] + cube[131:151]
+
+def rotate_555_Fw(cube):
+    return cube[0:16] + [cube[49],cube[44],cube[39],cube[34],cube[29],cube[50],cube[45],cube[40],cube[35],cube[30]] + cube[26:29] + [cube[131],cube[126]] + cube[31:34] + [cube[132],cube[127]] + cube[36:39] + [cube[133],cube[128]] + cube[41:44] + [cube[134],cube[129]] + cube[46:49] + [cube[135],cube[130],cube[71],cube[66],cube[61],cube[56],cube[51],cube[72],cube[67],cube[62],cube[57],cube[52],cube[73],cube[68],cube[63],cube[58],cube[53],cube[74],cube[69],cube[64],cube[59],cube[54],cube[75],cube[70],cube[65],cube[60],cube[55],cube[21],cube[16]] + cube[78:81] + [cube[22],cube[17]] + cube[83:86] + [cube[23],cube[18]] + cube[88:91] + [cube[24],cube[19]] + cube[93:96] + [cube[25],cube[20]] + cube[98:126] + [cube[96],cube[91],cube[86],cube[81],cube[76],cube[97],cube[92],cube[87],cube[82],cube[77]] + cube[136:151]
+
+def rotate_555_Fw_prime(cube):
+    return cube[0:16] + [cube[77],cube[82],cube[87],cube[92],cube[97],cube[76],cube[81],cube[86],cube[91],cube[96]] + cube[26:29] + [cube[20],cube[25]] + cube[31:34] + [cube[19],cube[24]] + cube[36:39] + [cube[18],cube[23]] + cube[41:44] + [cube[17],cube[22]] + cube[46:49] + [cube[16],cube[21],cube[55],cube[60],cube[65],cube[70],cube[75],cube[54],cube[59],cube[64],cube[69],cube[74],cube[53],cube[58],cube[63],cube[68],cube[73],cube[52],cube[57],cube[62],cube[67],cube[72],cube[51],cube[56],cube[61],cube[66],cube[71],cube[130],cube[135]] + cube[78:81] + [cube[129],cube[134]] + cube[83:86] + [cube[128],cube[133]] + cube[88:91] + [cube[127],cube[132]] + cube[93:96] + [cube[126],cube[131]] + cube[98:126] + [cube[30],cube[35],cube[40],cube[45],cube[50],cube[29],cube[34],cube[39],cube[44],cube[49]] + cube[136:151]
+
+def rotate_555_Fw2(cube):
+    return cube[0:16] + [cube[135],cube[134],cube[133],cube[132],cube[131],cube[130],cube[129],cube[128],cube[127],cube[126]] + cube[26:29] + [cube[97],cube[96]] + cube[31:34] + [cube[92],cube[91]] + cube[36:39] + [cube[87],cube[86]] + cube[41:44] + [cube[82],cube[81]] + cube[46:49] + [cube[77],cube[76],cube[75],cube[74],cube[73],cube[72],cube[71],cube[70],cube[69],cube[68],cube[67],cube[66],cube[65],cube[64],cube[63],cube[62],cube[61],cube[60],cube[59],cube[58],cube[57],cube[56],cube[55],cube[54],cube[53],cube[52],cube[51],cube[50],cube[49]] + cube[78:81] + [cube[45],cube[44]] + cube[83:86] + [cube[40],cube[39]] + cube[88:91] + [cube[35],cube[34]] + cube[93:96] + [cube[30],cube[29]] + cube[98:126] + [cube[25],cube[24],cube[23],cube[22],cube[21],cube[20],cube[19],cube[18],cube[17],cube[16]] + cube[136:151]
+
+def rotate_555_R(cube):
+    return cube[0:5] + [cube[55]] + cube[6:10] + [cube[60]] + cube[11:15] + [cube[65]] + cube[16:20] + [cube[70]] + cube[21:25] + [cube[75]] + cube[26:55] + [cube[130]] + cube[56:60] + [cube[135]] + cube[61:65] + [cube[140]] + cube[66:70] + [cube[145]] + cube[71:75] + [cube[150],cube[96],cube[91],cube[86],cube[81],cube[76],cube[97],cube[92],cube[87],cube[82],cube[77],cube[98],cube[93],cube[88],cube[83],cube[78],cube[99],cube[94],cube[89],cube[84],cube[79],cube[100],cube[95],cube[90],cube[85],cube[80],cube[25]] + cube[102:106] + [cube[20]] + cube[107:111] + [cube[15]] + cube[112:116] + [cube[10]] + cube[117:121] + [cube[5]] + cube[122:130] + [cube[121]] + cube[131:135] + [cube[116]] + cube[136:140] + [cube[111]] + cube[141:145] + [cube[106]] + cube[146:150] + [cube[101]]
+
+def rotate_555_R_prime(cube):
+    return cube[0:5] + [cube[121]] + cube[6:10] + [cube[116]] + cube[11:15] + [cube[111]] + cube[16:20] + [cube[106]] + cube[21:25] + [cube[101]] + cube[26:55] + [cube[5]] + cube[56:60] + [cube[10]] + cube[61:65] + [cube[15]] + cube[66:70] + [cube[20]] + cube[71:75] + [cube[25],cube[80],cube[85],cube[90],cube[95],cube[100],cube[79],cube[84],cube[89],cube[94],cube[99],cube[78],cube[83],cube[88],cube[93],cube[98],cube[77],cube[82],cube[87],cube[92],cube[97],cube[76],cube[81],cube[86],cube[91],cube[96],cube[150]] + cube[102:106] + [cube[145]] + cube[107:111] + [cube[140]] + cube[112:116] + [cube[135]] + cube[117:121] + [cube[130]] + cube[122:130] + [cube[55]] + cube[131:135] + [cube[60]] + cube[136:140] + [cube[65]] + cube[141:145] + [cube[70]] + cube[146:150] + [cube[75]]
+
+def rotate_555_R2(cube):
+    return cube[0:5] + [cube[130]] + cube[6:10] + [cube[135]] + cube[11:15] + [cube[140]] + cube[16:20] + [cube[145]] + cube[21:25] + [cube[150]] + cube[26:55] + [cube[121]] + cube[56:60] + [cube[116]] + cube[61:65] + [cube[111]] + cube[66:70] + [cube[106]] + cube[71:75] + [cube[101],cube[100],cube[99],cube[98],cube[97],cube[96],cube[95],cube[94],cube[93],cube[92],cube[91],cube[90],cube[89],cube[88],cube[87],cube[86],cube[85],cube[84],cube[83],cube[82],cube[81],cube[80],cube[79],cube[78],cube[77],cube[76],cube[75]] + cube[102:106] + [cube[70]] + cube[107:111] + [cube[65]] + cube[112:116] + [cube[60]] + cube[117:121] + [cube[55]] + cube[122:130] + [cube[5]] + cube[131:135] + [cube[10]] + cube[136:140] + [cube[15]] + cube[141:145] + [cube[20]] + cube[146:150] + [cube[25]]
+
+def rotate_555_Rw(cube):
+    return cube[0:4] + cube[54:56] + cube[6:9] + cube[59:61] + cube[11:14] + cube[64:66] + cube[16:19] + cube[69:71] + cube[21:24] + cube[74:76] + cube[26:54] + cube[129:131] + cube[56:59] + cube[134:136] + cube[61:64] + cube[139:141] + cube[66:69] + cube[144:146] + cube[71:74] + cube[149:151] + [cube[96],cube[91],cube[86],cube[81],cube[76],cube[97],cube[92],cube[87],cube[82],cube[77],cube[98],cube[93],cube[88],cube[83],cube[78],cube[99],cube[94],cube[89],cube[84],cube[79],cube[100],cube[95],cube[90],cube[85],cube[80],cube[25],cube[24]] + cube[103:106] + [cube[20],cube[19]] + cube[108:111] + [cube[15],cube[14]] + cube[113:116] + [cube[10],cube[9]] + cube[118:121] + [cube[5],cube[4]] + cube[123:129] + [cube[122],cube[121]] + cube[131:134] + [cube[117],cube[116]] + cube[136:139] + [cube[112],cube[111]] + cube[141:144] + [cube[107],cube[106]] + cube[146:149] + [cube[102],cube[101]]
+
+def rotate_555_Rw_prime(cube):
+    return cube[0:4] + [cube[122],cube[121]] + cube[6:9] + [cube[117],cube[116]] + cube[11:14] + [cube[112],cube[111]] + cube[16:19] + [cube[107],cube[106]] + cube[21:24] + [cube[102],cube[101]] + cube[26:54] + cube[4:6] + cube[56:59] + cube[9:11] + cube[61:64] + cube[14:16] + cube[66:69] + cube[19:21] + cube[71:74] + cube[24:26] + [cube[80],cube[85],cube[90],cube[95],cube[100],cube[79],cube[84],cube[89],cube[94],cube[99],cube[78],cube[83],cube[88],cube[93],cube[98],cube[77],cube[82],cube[87],cube[92],cube[97],cube[76],cube[81],cube[86],cube[91],cube[96],cube[150],cube[149]] + cube[103:106] + [cube[145],cube[144]] + cube[108:111] + [cube[140],cube[139]] + cube[113:116] + [cube[135],cube[134]] + cube[118:121] + [cube[130],cube[129]] + cube[123:129] + cube[54:56] + cube[131:134] + cube[59:61] + cube[136:139] + cube[64:66] + cube[141:144] + cube[69:71] + cube[146:149] + cube[74:76]
+
+def rotate_555_Rw2(cube):
+    return cube[0:4] + cube[129:131] + cube[6:9] + cube[134:136] + cube[11:14] + cube[139:141] + cube[16:19] + cube[144:146] + cube[21:24] + cube[149:151] + cube[26:54] + [cube[122],cube[121]] + cube[56:59] + [cube[117],cube[116]] + cube[61:64] + [cube[112],cube[111]] + cube[66:69] + [cube[107],cube[106]] + cube[71:74] + [cube[102],cube[101],cube[100],cube[99],cube[98],cube[97],cube[96],cube[95],cube[94],cube[93],cube[92],cube[91],cube[90],cube[89],cube[88],cube[87],cube[86],cube[85],cube[84],cube[83],cube[82],cube[81],cube[80],cube[79],cube[78],cube[77],cube[76],cube[75],cube[74]] + cube[103:106] + [cube[70],cube[69]] + cube[108:111] + [cube[65],cube[64]] + cube[113:116] + [cube[60],cube[59]] + cube[118:121] + [cube[55],cube[54]] + cube[123:129] + cube[4:6] + cube[131:134] + cube[9:11] + cube[136:139] + cube[14:16] + cube[141:144] + cube[19:21] + cube[146:149] + cube[24:26]
+
+def rotate_555_B(cube):
+    return [cube[0],cube[80],cube[85],cube[90],cube[95],cube[100]] + cube[6:26] + [cube[5]] + cube[27:31] + [cube[4]] + cube[32:36] + [cube[3]] + cube[37:41] + [cube[2]] + cube[42:46] + [cube[1]] + cube[47:80] + [cube[150]] + cube[81:85] + [cube[149]] + cube[86:90] + [cube[148]] + cube[91:95] + [cube[147]] + cube[96:100] + [cube[146],cube[121],cube[116],cube[111],cube[106],cube[101],cube[122],cube[117],cube[112],cube[107],cube[102],cube[123],cube[118],cube[113],cube[108],cube[103],cube[124],cube[119],cube[114],cube[109],cube[104],cube[125],cube[120],cube[115],cube[110],cube[105]] + cube[126:146] + [cube[26],cube[31],cube[36],cube[41],cube[46]]
+
+def rotate_555_B_prime(cube):
+    return [cube[0],cube[46],cube[41],cube[36],cube[31],cube[26]] + cube[6:26] + [cube[146]] + cube[27:31] + [cube[147]] + cube[32:36] + [cube[148]] + cube[37:41] + [cube[149]] + cube[42:46] + [cube[150]] + cube[47:80] + [cube[1]] + cube[81:85] + [cube[2]] + cube[86:90] + [cube[3]] + cube[91:95] + [cube[4]] + cube[96:100] + [cube[5],cube[105],cube[110],cube[115],cube[120],cube[125],cube[104],cube[109],cube[114],cube[119],cube[124],cube[103],cube[108],cube[113],cube[118],cube[123],cube[102],cube[107],cube[112],cube[117],cube[122],cube[101],cube[106],cube[111],cube[116],cube[121]] + cube[126:146] + [cube[100],cube[95],cube[90],cube[85],cube[80]]
+
+def rotate_555_B2(cube):
+    return [cube[0],cube[150],cube[149],cube[148],cube[147],cube[146]] + cube[6:26] + [cube[100]] + cube[27:31] + [cube[95]] + cube[32:36] + [cube[90]] + cube[37:41] + [cube[85]] + cube[42:46] + [cube[80]] + cube[47:80] + [cube[46]] + cube[81:85] + [cube[41]] + cube[86:90] + [cube[36]] + cube[91:95] + [cube[31]] + cube[96:100] + [cube[26],cube[125],cube[124],cube[123],cube[122],cube[121],cube[120],cube[119],cube[118],cube[117],cube[116],cube[115],cube[114],cube[113],cube[112],cube[111],cube[110],cube[109],cube[108],cube[107],cube[106],cube[105],cube[104],cube[103],cube[102],cube[101]] + cube[126:146] + [cube[5],cube[4],cube[3],cube[2],cube[1]]
+
+def rotate_555_Bw(cube):
+    return [cube[0],cube[80],cube[85],cube[90],cube[95],cube[100],cube[79],cube[84],cube[89],cube[94],cube[99]] + cube[11:26] + [cube[5],cube[10]] + cube[28:31] + [cube[4],cube[9]] + cube[33:36] + [cube[3],cube[8]] + cube[38:41] + [cube[2],cube[7]] + cube[43:46] + [cube[1],cube[6]] + cube[48:79] + [cube[145],cube[150]] + cube[81:84] + [cube[144],cube[149]] + cube[86:89] + [cube[143],cube[148]] + cube[91:94] + [cube[142],cube[147]] + cube[96:99] + [cube[141],cube[146],cube[121],cube[116],cube[111],cube[106],cube[101],cube[122],cube[117],cube[112],cube[107],cube[102],cube[123],cube[118],cube[113],cube[108],cube[103],cube[124],cube[119],cube[114],cube[109],cube[104],cube[125],cube[120],cube[115],cube[110],cube[105]] + cube[126:141] + [cube[27],cube[32],cube[37],cube[42],cube[47],cube[26],cube[31],cube[36],cube[41],cube[46]]
+
+def rotate_555_Bw_prime(cube):
+    return [cube[0],cube[46],cube[41],cube[36],cube[31],cube[26],cube[47],cube[42],cube[37],cube[32],cube[27]] + cube[11:26] + [cube[146],cube[141]] + cube[28:31] + [cube[147],cube[142]] + cube[33:36] + [cube[148],cube[143]] + cube[38:41] + [cube[149],cube[144]] + cube[43:46] + [cube[150],cube[145]] + cube[48:79] + [cube[6],cube[1]] + cube[81:84] + [cube[7],cube[2]] + cube[86:89] + [cube[8],cube[3]] + cube[91:94] + [cube[9],cube[4]] + cube[96:99] + [cube[10],cube[5],cube[105],cube[110],cube[115],cube[120],cube[125],cube[104],cube[109],cube[114],cube[119],cube[124],cube[103],cube[108],cube[113],cube[118],cube[123],cube[102],cube[107],cube[112],cube[117],cube[122],cube[101],cube[106],cube[111],cube[116],cube[121]] + cube[126:141] + [cube[99],cube[94],cube[89],cube[84],cube[79],cube[100],cube[95],cube[90],cube[85],cube[80]]
+
+def rotate_555_Bw2(cube):
+    return [cube[0],cube[150],cube[149],cube[148],cube[147],cube[146],cube[145],cube[144],cube[143],cube[142],cube[141]] + cube[11:26] + [cube[100],cube[99]] + cube[28:31] + [cube[95],cube[94]] + cube[33:36] + [cube[90],cube[89]] + cube[38:41] + [cube[85],cube[84]] + cube[43:46] + [cube[80],cube[79]] + cube[48:79] + [cube[47],cube[46]] + cube[81:84] + [cube[42],cube[41]] + cube[86:89] + [cube[37],cube[36]] + cube[91:94] + [cube[32],cube[31]] + cube[96:99] + [cube[27],cube[26],cube[125],cube[124],cube[123],cube[122],cube[121],cube[120],cube[119],cube[118],cube[117],cube[116],cube[115],cube[114],cube[113],cube[112],cube[111],cube[110],cube[109],cube[108],cube[107],cube[106],cube[105],cube[104],cube[103],cube[102],cube[101]] + cube[126:141] + [cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1]]
+
+def rotate_555_D(cube):
+    return cube[0:46] + cube[121:126] + cube[51:71] + cube[46:51] + cube[76:96] + cube[71:76] + cube[101:121] + cube[96:101] + [cube[146],cube[141],cube[136],cube[131],cube[126],cube[147],cube[142],cube[137],cube[132],cube[127],cube[148],cube[143],cube[138],cube[133],cube[128],cube[149],cube[144],cube[139],cube[134],cube[129],cube[150],cube[145],cube[140],cube[135],cube[130]]
+
+def rotate_555_D_prime(cube):
+    return cube[0:46] + cube[71:76] + cube[51:71] + cube[96:101] + cube[76:96] + cube[121:126] + cube[101:121] + cube[46:51] + [cube[130],cube[135],cube[140],cube[145],cube[150],cube[129],cube[134],cube[139],cube[144],cube[149],cube[128],cube[133],cube[138],cube[143],cube[148],cube[127],cube[132],cube[137],cube[142],cube[147],cube[126],cube[131],cube[136],cube[141],cube[146]]
+
+def rotate_555_D2(cube):
+    return cube[0:46] + cube[96:101] + cube[51:71] + cube[121:126] + cube[76:96] + cube[46:51] + cube[101:121] + cube[71:76] + [cube[150],cube[149],cube[148],cube[147],cube[146],cube[145],cube[144],cube[143],cube[142],cube[141],cube[140],cube[139],cube[138],cube[137],cube[136],cube[135],cube[134],cube[133],cube[132],cube[131],cube[130],cube[129],cube[128],cube[127],cube[126]]
+
+def rotate_555_Dw(cube):
+    return cube[0:41] + cube[116:126] + cube[51:66] + cube[41:51] + cube[76:91] + cube[66:76] + cube[101:116] + cube[91:101] + [cube[146],cube[141],cube[136],cube[131],cube[126],cube[147],cube[142],cube[137],cube[132],cube[127],cube[148],cube[143],cube[138],cube[133],cube[128],cube[149],cube[144],cube[139],cube[134],cube[129],cube[150],cube[145],cube[140],cube[135],cube[130]]
+
+def rotate_555_Dw_prime(cube):
+    return cube[0:41] + cube[66:76] + cube[51:66] + cube[91:101] + cube[76:91] + cube[116:126] + cube[101:116] + cube[41:51] + [cube[130],cube[135],cube[140],cube[145],cube[150],cube[129],cube[134],cube[139],cube[144],cube[149],cube[128],cube[133],cube[138],cube[143],cube[148],cube[127],cube[132],cube[137],cube[142],cube[147],cube[126],cube[131],cube[136],cube[141],cube[146]]
+
+def rotate_555_Dw2(cube):
+    return cube[0:41] + cube[91:101] + cube[51:66] + cube[116:126] + cube[76:91] + cube[41:51] + cube[101:116] + cube[66:76] + [cube[150],cube[149],cube[148],cube[147],cube[146],cube[145],cube[144],cube[143],cube[142],cube[141],cube[140],cube[139],cube[138],cube[137],cube[136],cube[135],cube[134],cube[133],cube[132],cube[131],cube[130],cube[129],cube[128],cube[127],cube[126]]
+
+def rotate_555_x(cube):
+    return [cube[0]] + cube[51:76] + [cube[30],cube[35],cube[40],cube[45],cube[50],cube[29],cube[34],cube[39],cube[44],cube[49],cube[28],cube[33],cube[38],cube[43],cube[48],cube[27],cube[32],cube[37],cube[42],cube[47],cube[26],cube[31],cube[36],cube[41],cube[46]] + cube[126:151] + [cube[96],cube[91],cube[86],cube[81],cube[76],cube[97],cube[92],cube[87],cube[82],cube[77],cube[98],cube[93],cube[88],cube[83],cube[78],cube[99],cube[94],cube[89],cube[84],cube[79],cube[100],cube[95],cube[90],cube[85],cube[80],cube[25],cube[24],cube[23],cube[22],cube[21],cube[20],cube[19],cube[18],cube[17],cube[16],cube[15],cube[14],cube[13],cube[12],cube[11],cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1],cube[125],cube[124],cube[123],cube[122],cube[121],cube[120],cube[119],cube[118],cube[117],cube[116],cube[115],cube[114],cube[113],cube[112],cube[111],cube[110],cube[109],cube[108],cube[107],cube[106],cube[105],cube[104],cube[103],cube[102],cube[101]]
+
+def rotate_555_x_prime(cube):
+    return [cube[0],cube[125],cube[124],cube[123],cube[122],cube[121],cube[120],cube[119],cube[118],cube[117],cube[116],cube[115],cube[114],cube[113],cube[112],cube[111],cube[110],cube[109],cube[108],cube[107],cube[106],cube[105],cube[104],cube[103],cube[102],cube[101],cube[46],cube[41],cube[36],cube[31],cube[26],cube[47],cube[42],cube[37],cube[32],cube[27],cube[48],cube[43],cube[38],cube[33],cube[28],cube[49],cube[44],cube[39],cube[34],cube[29],cube[50],cube[45],cube[40],cube[35],cube[30]] + cube[1:26] + [cube[80],cube[85],cube[90],cube[95],cube[100],cube[79],cube[84],cube[89],cube[94],cube[99],cube[78],cube[83],cube[88],cube[93],cube[98],cube[77],cube[82],cube[87],cube[92],cube[97],cube[76],cube[81],cube[86],cube[91],cube[96],cube[150],cube[149],cube[148],cube[147],cube[146],cube[145],cube[144],cube[143],cube[142],cube[141],cube[140],cube[139],cube[138],cube[137],cube[136],cube[135],cube[134],cube[133],cube[132],cube[131],cube[130],cube[129],cube[128],cube[127],cube[126]] + cube[51:76]
+
+def rotate_555_y(cube):
+    return [cube[0],cube[21],cube[16],cube[11],cube[6],cube[1],cube[22],cube[17],cube[12],cube[7],cube[2],cube[23],cube[18],cube[13],cube[8],cube[3],cube[24],cube[19],cube[14],cube[9],cube[4],cube[25],cube[20],cube[15],cube[10],cube[5]] + cube[51:126] + cube[26:51] + [cube[130],cube[135],cube[140],cube[145],cube[150],cube[129],cube[134],cube[139],cube[144],cube[149],cube[128],cube[133],cube[138],cube[143],cube[148],cube[127],cube[132],cube[137],cube[142],cube[147],cube[126],cube[131],cube[136],cube[141],cube[146]]
+
+def rotate_555_y_prime(cube):
+    return [cube[0],cube[5],cube[10],cube[15],cube[20],cube[25],cube[4],cube[9],cube[14],cube[19],cube[24],cube[3],cube[8],cube[13],cube[18],cube[23],cube[2],cube[7],cube[12],cube[17],cube[22],cube[1],cube[6],cube[11],cube[16],cube[21]] + cube[101:126] + cube[26:101] + [cube[146],cube[141],cube[136],cube[131],cube[126],cube[147],cube[142],cube[137],cube[132],cube[127],cube[148],cube[143],cube[138],cube[133],cube[128],cube[149],cube[144],cube[139],cube[134],cube[129],cube[150],cube[145],cube[140],cube[135],cube[130]]
+
+def rotate_555_z(cube):
+    return [cube[0],cube[46],cube[41],cube[36],cube[31],cube[26],cube[47],cube[42],cube[37],cube[32],cube[27],cube[48],cube[43],cube[38],cube[33],cube[28],cube[49],cube[44],cube[39],cube[34],cube[29],cube[50],cube[45],cube[40],cube[35],cube[30],cube[146],cube[141],cube[136],cube[131],cube[126],cube[147],cube[142],cube[137],cube[132],cube[127],cube[148],cube[143],cube[138],cube[133],cube[128],cube[149],cube[144],cube[139],cube[134],cube[129],cube[150],cube[145],cube[140],cube[135],cube[130],cube[71],cube[66],cube[61],cube[56],cube[51],cube[72],cube[67],cube[62],cube[57],cube[52],cube[73],cube[68],cube[63],cube[58],cube[53],cube[74],cube[69],cube[64],cube[59],cube[54],cube[75],cube[70],cube[65],cube[60],cube[55],cube[21],cube[16],cube[11],cube[6],cube[1],cube[22],cube[17],cube[12],cube[7],cube[2],cube[23],cube[18],cube[13],cube[8],cube[3],cube[24],cube[19],cube[14],cube[9],cube[4],cube[25],cube[20],cube[15],cube[10],cube[5],cube[105],cube[110],cube[115],cube[120],cube[125],cube[104],cube[109],cube[114],cube[119],cube[124],cube[103],cube[108],cube[113],cube[118],cube[123],cube[102],cube[107],cube[112],cube[117],cube[122],cube[101],cube[106],cube[111],cube[116],cube[121],cube[96],cube[91],cube[86],cube[81],cube[76],cube[97],cube[92],cube[87],cube[82],cube[77],cube[98],cube[93],cube[88],cube[83],cube[78],cube[99],cube[94],cube[89],cube[84],cube[79],cube[100],cube[95],cube[90],cube[85],cube[80]]
+
+def rotate_555_z_prime(cube):
+    return [cube[0],cube[80],cube[85],cube[90],cube[95],cube[100],cube[79],cube[84],cube[89],cube[94],cube[99],cube[78],cube[83],cube[88],cube[93],cube[98],cube[77],cube[82],cube[87],cube[92],cube[97],cube[76],cube[81],cube[86],cube[91],cube[96],cube[5],cube[10],cube[15],cube[20],cube[25],cube[4],cube[9],cube[14],cube[19],cube[24],cube[3],cube[8],cube[13],cube[18],cube[23],cube[2],cube[7],cube[12],cube[17],cube[22],cube[1],cube[6],cube[11],cube[16],cube[21],cube[55],cube[60],cube[65],cube[70],cube[75],cube[54],cube[59],cube[64],cube[69],cube[74],cube[53],cube[58],cube[63],cube[68],cube[73],cube[52],cube[57],cube[62],cube[67],cube[72],cube[51],cube[56],cube[61],cube[66],cube[71],cube[130],cube[135],cube[140],cube[145],cube[150],cube[129],cube[134],cube[139],cube[144],cube[149],cube[128],cube[133],cube[138],cube[143],cube[148],cube[127],cube[132],cube[137],cube[142],cube[147],cube[126],cube[131],cube[136],cube[141],cube[146],cube[121],cube[116],cube[111],cube[106],cube[101],cube[122],cube[117],cube[112],cube[107],cube[102],cube[123],cube[118],cube[113],cube[108],cube[103],cube[124],cube[119],cube[114],cube[109],cube[104],cube[125],cube[120],cube[115],cube[110],cube[105],cube[30],cube[35],cube[40],cube[45],cube[50],cube[29],cube[34],cube[39],cube[44],cube[49],cube[28],cube[33],cube[38],cube[43],cube[48],cube[27],cube[32],cube[37],cube[42],cube[47],cube[26],cube[31],cube[36],cube[41],cube[46]]
+
+rotate_mapper_555 = {
+    "B" : rotate_555_B,
+    "B'" : rotate_555_B_prime,
+    "B2" : rotate_555_B2,
+    "Bw" : rotate_555_Bw,
+    "Bw'" : rotate_555_Bw_prime,
+    "Bw2" : rotate_555_Bw2,
+    "D" : rotate_555_D,
+    "D'" : rotate_555_D_prime,
+    "D2" : rotate_555_D2,
+    "Dw" : rotate_555_Dw,
+    "Dw'" : rotate_555_Dw_prime,
+    "Dw2" : rotate_555_Dw2,
+    "F" : rotate_555_F,
+    "F'" : rotate_555_F_prime,
+    "F2" : rotate_555_F2,
+    "Fw" : rotate_555_Fw,
+    "Fw'" : rotate_555_Fw_prime,
+    "Fw2" : rotate_555_Fw2,
+    "L" : rotate_555_L,
+    "L'" : rotate_555_L_prime,
+    "L2" : rotate_555_L2,
+    "Lw" : rotate_555_Lw,
+    "Lw'" : rotate_555_Lw_prime,
+    "Lw2" : rotate_555_Lw2,
+    "R" : rotate_555_R,
+    "R'" : rotate_555_R_prime,
+    "R2" : rotate_555_R2,
+    "Rw" : rotate_555_Rw,
+    "Rw'" : rotate_555_Rw_prime,
+    "Rw2" : rotate_555_Rw2,
+    "U" : rotate_555_U,
+    "U'" : rotate_555_U_prime,
+    "U2" : rotate_555_U2,
+    "Uw" : rotate_555_Uw,
+    "Uw'" : rotate_555_Uw_prime,
+    "Uw2" : rotate_555_Uw2,
+    "x" : rotate_555_x,
+    "x'" : rotate_555_x_prime,
+    "y" : rotate_555_y,
+    "y'" : rotate_555_y_prime,
+    "z" : rotate_555_z,
+    "z'" : rotate_555_z_prime,
+}
+
+def rotate_555(cube, step):
+    return rotate_mapper_555[step](cube)
 
 
 if __name__ == '__main__':

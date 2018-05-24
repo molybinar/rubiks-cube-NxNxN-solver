@@ -1,28 +1,13 @@
 #!/usr/bin/env python3
 
-from copy import copy
 from rubikscubennnsolver import RubiksCube
-from rubikscubennnsolver.RubiksSide import SolveError
-from rubikscubennnsolver.RubiksCube444Misc import (
-    lookup_table_444_last_two_edges_place_F_east,
-    lookup_table_444_sister_wing_to_F_east,
-    lookup_table_444_sister_wing_to_U_west,
-    tsai_phase2_orient_edges_444,
-    tsai_edge_mapping_combinations,
-)
 from rubikscubennnsolver.LookupTable import (
     get_characters_common_count,
-    stage_first_four_edges_wing_str_combos,
+    steps_on_same_face_and_layer,
     LookupTable,
+    LookupTableCostOnly,
     LookupTableIDA,
-    LookupTableAStar,
-    NoSteps,
-    NoIDASolution,
 )
-from rubikscubennnsolver.rotate_xxx import rotate_444
-from subprocess import check_output
-from pprint import pformat
-import itertools
 import logging
 import sys
 
@@ -35,10 +20,15 @@ moves_4x4x4 = ("U", "U'", "U2", "Uw", "Uw'", "Uw2",
                "R" , "R'", "R2", "Rw", "Rw'", "Rw2",
                "B" , "B'", "B2", "Bw", "Bw'", "Bw2",
                "D" , "D'", "D2", "Dw", "Dw'", "Dw2")
+
 solved_4x4x4 = 'UUUUUUUUUUUUUUUURRRRRRRRRRRRRRRRFFFFFFFFFFFFFFFFDDDDDDDDDDDDDDDDLLLLLLLLLLLLLLLLBBBBBBBBBBBBBBBB'
+
 centers_444 = (6, 7, 10, 11, 22, 23, 26, 27, 38, 39, 42, 43, 54, 55, 58, 59, 70, 71, 74, 75, 86, 87, 90, 91)
+
 UD_centers_444 = (6, 7, 10, 11, 86, 87, 90, 91)
+
 LR_centers_444 = (22, 23, 26, 27, 54, 55, 58, 59)
+
 edges_444 = (
     2, 3, 5, 8, 9, 12, 14, 15,      # Upper
     18, 19, 21, 24, 25, 28, 30, 31, # Left
@@ -61,6 +51,39 @@ wings_444 = (
     88, 92,
     94, 95
 )
+
+centers_solved_states_444 = set()
+centers_solved_states_444.add('UUUULLLLFFFFRRRRBBBBDDDD')
+centers_solved_states_444.add('UUUUFFFFRRRRBBBBLLLLDDDD')
+centers_solved_states_444.add('UUUURRRRBBBBLLLLFFFFDDDD')
+centers_solved_states_444.add('UUUUBBBBLLLLFFFFRRRRDDDD')
+centers_solved_states_444.add('DDDDLLLLBBBBRRRRFFFFUUUU')
+centers_solved_states_444.add('DDDDBBBBRRRRFFFFLLLLUUUU')
+centers_solved_states_444.add('DDDDRRRRFFFFLLLLBBBBUUUU')
+centers_solved_states_444.add('DDDDFFFFLLLLBBBBRRRRUUUU')
+centers_solved_states_444.add('LLLLUUUUBBBBDDDDFFFFRRRR')
+centers_solved_states_444.add('LLLLBBBBDDDDFFFFUUUURRRR')
+centers_solved_states_444.add('LLLLDDDDFFFFUUUUBBBBRRRR')
+centers_solved_states_444.add('LLLLFFFFUUUUBBBBDDDDRRRR')
+centers_solved_states_444.add('FFFFLLLLDDDDRRRRUUUUBBBB')
+centers_solved_states_444.add('FFFFDDDDRRRRUUUULLLLBBBB')
+centers_solved_states_444.add('FFFFRRRRUUUULLLLDDDDBBBB')
+centers_solved_states_444.add('FFFFUUUULLLLDDDDRRRRBBBB')
+centers_solved_states_444.add('RRRRDDDDBBBBUUUUFFFFLLLL')
+centers_solved_states_444.add('RRRRBBBBUUUUFFFFDDDDLLLL')
+centers_solved_states_444.add('RRRRUUUUFFFFDDDDBBBBLLLL')
+centers_solved_states_444.add('RRRRFFFFDDDDBBBBUUUULLLL')
+centers_solved_states_444.add('BBBBUUUURRRRDDDDLLLLFFFF')
+centers_solved_states_444.add('BBBBRRRRDDDDLLLLUUUUFFFF')
+centers_solved_states_444.add('BBBBDDDDLLLLUUUURRRRFFFF')
+centers_solved_states_444.add('BBBBLLLLUUUURRRRDDDDFFFF')
+
+def centers_solved_444(state):
+    if state[0:24] in centers_solved_states_444:
+        return True
+    return False
+
+
 
 def get_best_entry(foo):
     # TODO this can only track wings since it is only used by 4x4x4
@@ -218,59 +241,57 @@ lookup-table-4x4x4-step13-FB-centers-stage.txt
 
 Total: 735,471 entries
 '''
-class LookupTable444UDCentersStage(LookupTable):
+class LookupTable444UDCentersStageCostOnly(LookupTableCostOnly):
 
     def __init__(self, parent):
 
-        LookupTable.__init__(
+        LookupTableCostOnly.__init__(
             self,
             parent,
-            'lookup-table-4x4x4-step11-UD-centers-stage.txt',
+            'lookup-table-4x4x4-step11-UD-centers-stage.cost-only.txt',
             'f0000f',
-            linecount=735471)
+            linecount=735471,
+            max_depth=9)
 
     def state(self):
         parent_state = self.parent.state
         result = ''.join(['1' if parent_state[x] in ('U', 'D') else '0' for x in centers_444])
-
-        # Convert to hex
-        return self.hex_format % int(result, 2)
+        return int(result, 2)
 
 
-class LookupTable444LRCentersStage(LookupTable):
+class LookupTable444LRCentersStageCostOnly(LookupTableCostOnly):
 
     def __init__(self, parent):
-        LookupTable.__init__(
+        LookupTableCostOnly.__init__(
             self,
             parent,
-            'lookup-table-4x4x4-step12-LR-centers-stage.txt',
+            'lookup-table-4x4x4-step12-LR-centers-stage.cost-only.txt',
             '0f0f00',
-            linecount=735471)
+            linecount=735471,
+            max_depth=9)
 
     def state(self):
         parent_state = self.parent.state
         result = ''.join(['1' if parent_state[x] in ('L', 'R') else '0' for x in centers_444])
-
-        # Convert to hex
-        return self.hex_format % int(result, 2)
+        return int(result, 2)
 
 
-class LookupTable444FBCentersStage(LookupTable):
+class LookupTable444FBCentersStageCostOnly(LookupTableCostOnly):
 
     def __init__(self, parent):
-        LookupTable.__init__(
+        LookupTableCostOnly.__init__(
             self,
             parent,
-            'lookup-table-4x4x4-step13-FB-centers-stage.txt',
+            'lookup-table-4x4x4-step13-FB-centers-stage.cost-only.txt',
             '00f0f0',
-            linecount=735471)
+            linecount=735471,
+            max_depth=9)
 
     def state(self):
         parent_state = self.parent.state
         result = ''.join(['1' if parent_state[x] in ('F', 'B') else '0' for x in centers_444])
+        return int(result, 2)
 
-        # Convert to hex
-        return self.hex_format % int(result, 2)
 
 
 class LookupTableIDA444ULFRBDCentersStage(LookupTableIDA):
@@ -305,25 +326,12 @@ class LookupTableIDA444ULFRBDCentersStage(LookupTableIDA):
             (parent.lt_UD_centers_stage,
              parent.lt_LR_centers_stage,
              parent.lt_FB_centers_stage),
-            linecount=1718045)
+            linecount=1718045,
+            max_depth=6)
 
     def state(self):
         parent_state = self.parent.state
-        result = []
-
-        for index in centers_444:
-            x = parent_state[index]
-
-            if x in ('L', 'F', 'U'):
-                result.append(x)
-            elif x == 'R':
-                result.append('L')
-            elif x == 'B':
-                result.append('F')
-            elif x == 'D':
-                result.append('U')
-
-        result = ''.join(result)
+        result = ''.join(['L' if parent_state[x] in ('L', 'R') else 'F' if parent_state[x] in ('F', 'B') else 'U' for x in centers_444])
         return result
 
 
@@ -352,7 +360,8 @@ class LookupTable444ULFRBDCentersSolve(LookupTable):
             parent,
             'lookup-table-4x4x4-step30-ULFRBD-centers-solve.txt',
             'UUUULLLLFFFFRRRRBBBBDDDD',
-            linecount=2058000)
+            linecount=2058000,
+            max_depth=11)
 
     def state(self):
         parent_state = self.parent.state
@@ -360,198 +369,54 @@ class LookupTable444ULFRBDCentersSolve(LookupTable):
         return result
 
 
-class LookupTable444TsaiPhase1(LookupTable):
+class LookupTable444ULFRBDCentersSolvePairTwoEdges(LookupTableIDA):
     """
-    lookup-table-4x4x4-step50-tsai-phase1.txt
-    =========================================
-    1 steps has 5 entries (0 percent, 0.00x previous step)
-    2 steps has 82 entries (0 percent, 16.40x previous step)
-    3 steps has 1,206 entries (0 percent, 14.71x previous step)
-    4 steps has 14,116 entries (1 percent, 11.70x previous step)
-    5 steps has 123,404 entries (16 percent, 8.74x previous step)
-    6 steps has 422,508 entries (57 percent, 3.42x previous step)
-    7 steps has 173,254 entries (23 percent, 0.41x previous step)
-    8 steps has 896 entries (0 percent, 0.01x previous step)
+    IDA search for a centers solution that also happens to pair two or more edges.
+    We do this to (drastically) speed up the edges table lookup later. If no
+    edges are paired the edges signature is 000000000000 and there are about
+    600k of those entries in lookup-table-4x4x4-step110-edges.txt that we will
+    have to evaluate.
 
-    Total: 735,471 entries
+    If we can pair two though that drops us down to about 40k edge entries to deal with.
     """
-
-    def __init__(self, parent):
-        LookupTable.__init__(
-            self,
-            parent,
-            'lookup-table-4x4x4-step50-tsai-phase1.txt',
-            '0f0f00',
-            linecount=735471)
-
-    def state(self):
-        parent_state = self.parent.state
-        result = ''.join(['1' if parent_state[x] in ('L', 'R') else '0' for x in centers_444])
-
-        # Convert to hex
-        return self.hex_format % int(result, 2)
-
-
-class LookupTable444TsaiPhase2Centers(LookupTable):
-    """
-    lookup-table-4x4x4-step61-centers.txt
-    =====================================
-    1 steps has 34 entries (0 percent, 0.00x previous step)
-    2 steps has 194 entries (0 percent, 5.71x previous step)
-    3 steps has 1,716 entries (0 percent, 8.85x previous step)
-    4 steps has 12,206 entries (1 percent, 7.11x previous step)
-    5 steps has 68,428 entries (7 percent, 5.61x previous step)
-    6 steps has 247,370 entries (27 percent, 3.62x previous step)
-    7 steps has 434,332 entries (48 percent, 1.76x previous step)
-    8 steps has 135,034 entries (14 percent, 0.31x previous step)
-    9 steps has 1,586 entries (0 percent, 0.01x previous step)
-
-    Total: 900,900 entries
-    """
-
-    def __init__(self, parent):
-        LookupTable.__init__(
-            self,
-            parent,
-            'lookup-table-4x4x4-step61-tsai-phase2-centers.txt',
-            ('UUUULLLLFFFFRRRRFFFFUUUU',
-             'UUUURRRRFFFFLLLLFFFFUUUU',
-             'UUUULLRRFFFFRRLLFFFFUUUU',
-             'UUUULLRRFFFFLLRRFFFFUUUU',
-             'UUUURRLLFFFFRRLLFFFFUUUU',
-             'UUUURRLLFFFFLLRRFFFFUUUU',
-             'UUUURLRLFFFFRLRLFFFFUUUU',
-             'UUUURLRLFFFFLRLRFFFFUUUU',
-             'UUUULRLRFFFFRLRLFFFFUUUU',
-             'UUUULRLRFFFFLRLRFFFFUUUU',
-             'UUUURLLRFFFFLRRLFFFFUUUU',
-             'UUUULRRLFFFFRLLRFFFFUUUU'),
-            linecount=900900)
-
-    def state(self):
-        parent_state = self.parent.state
-        result = []
-
-        for index in centers_444:
-            x = parent_state[index]
-
-            if x in ('L', 'F', 'R', 'U'):
-                result.append(x)
-            elif x == 'B':
-                result.append('F')
-            elif x == 'D':
-                result.append('U')
-
-        result = ''.join(result)
-        return result
-
-
-tsai_phase2_LR_center_targets = set((
-    'LLLLRRRR',
-    'RRRRLLLL',
-    'LLRRRRLL',
-    'LLRRLLRR',
-    'RRLLRRLL',
-    'RRLLLLRR',
-    'RLRLRLRL',
-    'RLRLLRLR',
-    'LRLRRLRL',
-    'LRLRLRLR',
-    'RLLRLRRL',
-    'LRRLRLLR'))
-
-class LookupTableIDA444TsaiPhase2(LookupTableIDA):
 
     def __init__(self, parent):
         LookupTableIDA.__init__(
             self,
             parent,
             'lookup-table-4x4x4-step60-tsai-phase2-dummy.txt',
-            '111111111111_10425376a8b9ecfdhgkiljnm',
+            'TBD',
             moves_4x4x4,
-            ("Fw", "Fw'", "Bw", "Bw'",
-             "Uw", "Uw'", "Dw", "Dw'", # illegal_moves
-             "Bw2", "Dw2", "Lw", "Lw'", "Lw2"), # TPR also restricts these
+            ("Rw", "Rw'", "Lw", "Lw'",
+             "Fw", "Fw'", "Bw", "Bw'",
+             "Uw", "Uw'", "Dw", "Dw'"),
 
             # prune tables
-            (parent.lt_tsai_phase2_centers,),
-            linecount=0)
+            (parent.lt_ULFRBD_centers_solve,),
+            linecount=0,
+            max_depth=99)
 
     def state(self):
-        babel = {
-            'L' : 'L',
-            'F' : 'F',
-            'R' : 'R',
-            'B' : 'F',
-            'D' : 'U',
-            'U' : 'U',
-        }
-        parent_state = self.parent.state
-
-        result = [
-            # Upper
-            parent_state[2], parent_state[3],
-            parent_state[5], babel[parent_state[6]], babel[parent_state[7]], parent_state[8],
-            parent_state[9], babel[parent_state[10]], babel[parent_state[11]], parent_state[12],
-            parent_state[14], parent_state[15],
-
-            # Left
-            parent_state[18], parent_state[19],
-            parent_state[21], babel[parent_state[22]], babel[parent_state[23]], parent_state[24],
-            parent_state[25], babel[parent_state[26]], babel[parent_state[27]], parent_state[28],
-            parent_state[30], parent_state[31],
-
-            # Front
-            parent_state[34], parent_state[35],
-            parent_state[37], babel[parent_state[38]], babel[parent_state[39]], parent_state[40],
-            parent_state[41], babel[parent_state[42]], babel[parent_state[43]], parent_state[44],
-            parent_state[46], parent_state[47],
-
-            # Right
-            parent_state[50], parent_state[51],
-            parent_state[53], babel[parent_state[54]], babel[parent_state[55]], parent_state[56],
-            parent_state[57], babel[parent_state[58]], babel[parent_state[59]], parent_state[60],
-            parent_state[62], parent_state[63],
-
-            # Back
-            parent_state[66], parent_state[67],
-            parent_state[69], babel[parent_state[70]], babel[parent_state[71]], parent_state[72],
-            parent_state[73], babel[parent_state[74]], babel[parent_state[75]], parent_state[76],
-            parent_state[78], parent_state[79],
-
-            # Down
-            parent_state[82], parent_state[83],
-            parent_state[85], babel[parent_state[86]], babel[parent_state[87]], parent_state[88],
-            parent_state[89], babel[parent_state[90]], babel[parent_state[91]], parent_state[92],
-            parent_state[94], parent_state[95],
-        ]
-
-        result = ''.join(result)
-        return result
+        state = self.parent.state
+        edges = ''.join([state[square_index] for square_index in wings_444])
+        centers = ''.join([state[x] for x in centers_444])
+        return centers + edges
 
     def search_complete(self, state, steps_to_here):
-        parent_state = self.parent.state
+        """
+        return True if centers are solved and at least 2 edges are paired
+        """
 
-        # Are UD and FB staged? Check UD, if it is staged FB has to be staged too.
-        for x in UD_centers_444:
-            if parent_state[x] not in ('U', 'D'):
-                return False
+        if centers_solved_444(state):
+            paired_edges_count = 12 - self.parent.get_non_paired_edges_count()
 
-        # Are the LR sides in 1 of the 12 states we want?
-        LR_centers = [parent_state[x] for x in LR_centers_444]
-        LR_centers = ''.join(LR_centers)
+            if paired_edges_count >= 2:
 
-        if LR_centers not in tsai_phase2_LR_center_targets:
-            return False
-
-        # If we are here then our centers are all good...check the edges.
-        # If the edges are not in lt_tsai_phase3_edges_solve it may throw a KeyError
-        try:
-            if self.parent.lt_tsai_phase3_edges_solve.steps() is not None and self.parent.edge_swaps_even(False, None, False):
-
-                #log.warning("phase3_edges state %s, steps %s" % (
-                #    self.parent.lt_tsai_phase3_edges_solve.state(),
-                #    ' '.join(self.parent.lt_tsai_phase3_edges_solve.steps())))
+                if self.avoid_oll and self.parent.center_solution_leads_to_oll_parity():
+                    self.parent.state = self.original_state[:]
+                    self.parent.solution = self.original_solution[:]
+                    log.info("%s: IDA found match but it leads to OLL" % self)
+                    return False
 
                 # rotate_xxx() is very fast but it does not append the
                 # steps to the solution so put the cube back in original state
@@ -564,98 +429,75 @@ class LookupTableIDA444TsaiPhase2(LookupTableIDA):
 
                 return True
 
-        except KeyError:
-            pass
-
         return False
 
 
-symmetry_rotations_tsai_phase3_444 =\
-    ("",
-     "y y",
-     "x",
-     "x y y",
-     "x'",
-     "x' y y",
-     "x x",
-     "x x y y",
-     "reflect-x",
-     "reflect-x y y",
-     "reflect-x x",
-     "reflect-x x y y",
-     "reflect-x x'",
-     "reflect-x x' y y",
-     "reflect-x x x",
-     "reflect-x x x y y")
-
-# 12-23 are high edges, make these U (1)
-# 0-11 are low edges, make these D (6)
-# https://github.com/cs0x7f/TPR-4x4x4-Solver/blob/master/src/FullCube.java
-high_edges_444 = ((14, 2, 67),  # upper
-                  (13, 9, 19),
-                  (15, 8, 51),
-                  (12, 15, 35),
-                  (21, 25, 76), # left
-                  (20, 24, 37),
-                  (23, 57, 44), # right
-                  (22, 56, 69),
-                  (18, 82, 46), # down
-                  (17, 89, 30),
-                  (19, 88, 62),
-                  (16, 95, 78))
-
-
-low_edges_444 = ((2, 3, 66),  # upper
-                 (1, 5, 18),
-                 (3, 12, 50),
-                 (0, 14, 34),
-                 (9, 21, 72), # left
-                 (8, 28, 41),
-                 (11, 53, 40), # right
-                 (10, 60, 73),
-                 (6, 83, 47), # down
-                 (5, 85, 31),
-                 (7, 92, 63),
-                 (4, 94, 79))
-
-
-def edges_high_low_recolor_444(state):
+class LookupTable444ULFRBDCentersSolveEdgesStage(LookupTableIDA):
     """
-    Look at all of the high edges and find the low edge for each.
-    Return a string that represents where all the low edge siblings live in relation to their high edge counterpart.
+    Experiment to IDA search until we find a solution that happens to put
+    the edges in a state that are in our edge table
+
+    This is sloooow
     """
-    #assert len(state) == 97, "Invalid state %s, len is %d" % (state, len(state))
-    low_edge_map = {}
 
-    for (low_edge_index, square_index, partner_index) in low_edges_444:
-        square_value = state[square_index]
-        partner_value = state[partner_index]
-        #assert square_value != partner_value, "both squares are %s" % square_value
-        wing_str = ''.join(sorted([square_value, partner_value]))
-        low_edge_index = str(hex(low_edge_index))[2:]
-        state[square_index] = low_edge_index
-        state[partner_index] = low_edge_index
+    def __init__(self, parent):
+        LookupTableIDA.__init__(
+            self,
+            parent,
+            'lookup-table-4x4x4-step60-tsai-phase2-dummy.txt',
+            'TBD',
+            moves_4x4x4,
+            ("Rw", "Rw'", "Lw", "Lw'",
+             "Fw", "Fw'", "Bw", "Bw'",
+             "Uw", "Uw'", "Dw", "Dw'"),
 
-        #assert wing_str not in low_edge_map, "We have two %s wings, one at high_index %s %s and one at high_index %s (%d, %d), state %s" %\
-        #    (wing_str,
-        #     low_edge_map[wing_str],
-        #     pformat(low_edges_444[int(low_edge_map[wing_str])]),
-        #     low_edge_index,
-        #     square_index, partner_index,
-        #     ''.join(state[1:]))
+            # prune tables
+            (parent.lt_ULFRBD_centers_solve,),
+            linecount=0)
 
-        # save low_edge_index in hex and chop the leading 0x via [2:]
-        low_edge_map[wing_str] = low_edge_index
+    def state(self):
+        state = edges_recolor_pattern_444(self.parent.state[:])
 
-    #assert len(low_edge_map.keys()) == 12, "Invalid low_edge_map\n%s\n" % pformat(low_edge_map)
+        edges = ''.join([state[square_index] for square_index in wings_444])
+        centers = ''.join([state[x] for x in centers_444])
 
-    for (high_edge_index, square_index, partner_index) in high_edges_444:
-        square_value = state[square_index]
-        partner_value = state[partner_index]
-        wing_str = ''.join(sorted([square_value, partner_value]))
-        state[square_index] = low_edge_map[wing_str]
-        state[partner_index] = low_edge_map[wing_str]
-    return state
+        return centers + edges
+
+    def search_complete(self, state, steps_to_here):
+
+        if centers_solved_444(state) and self.parent.solve_all_edges_444(use_bfs=False, apply_steps_if_found=False):
+
+            if self.parent.center_solution_leads_to_oll_parity():
+                self.parent.state = self.original_state[:]
+                self.parent.solution = self.original_solution[:]
+                log.info("%s: IDA found match but it leads to OLL" % self)
+                return False
+
+            tmp_state = self.parent.state[:]
+            tmp_solution = self.parent.solution[:]
+            self.parent.solve_all_edges_444(use_bfs=False, apply_steps_if_found=True)
+
+            if self.parent.edge_solution_leads_to_pll_parity():
+                self.parent.state = self.original_state[:]
+                self.parent.solution = self.original_solution[:]
+                log.info("%s: IDA found match but it leads to PLL" % self)
+                return False
+
+            self.parent.state = tmp_state
+            self.parent.solution = tmp_solution
+
+            # rotate_xxx() is very fast but it does not append the
+            # steps to the solution so put the cube back in original state
+            # and execute the steps via a normal rotate() call
+            self.parent.state = self.original_state[:]
+            self.parent.solution = self.original_solution[:]
+
+            for step in steps_to_here:
+                self.parent.rotate(step)
+
+            return True
+
+        return False
 
 
 wings_for_edges_recolor_pattern_444 = (
@@ -728,269 +570,31 @@ def edges_recolor_pattern_444(state):
     return ''.join(state)
 
 
-def reflect_x_444(cube):
-    return [cube[0],
-           cube[93], cube[94], cube[95], cube[96],
-           cube[89], cube[90], cube[91], cube[92],
-           cube[85], cube[86], cube[87], cube[88],
-           cube[81], cube[82], cube[83], cube[84],
-           cube[29], cube[30], cube[31], cube[32],
-           cube[25], cube[26], cube[27], cube[28],
-           cube[21], cube[22], cube[23], cube[24],
-           cube[17], cube[18], cube[19], cube[20],
-           cube[45], cube[46], cube[47], cube[48],
-           cube[41], cube[42], cube[43], cube[44],
-           cube[37], cube[38], cube[39], cube[40],
-           cube[33], cube[34], cube[35], cube[36],
-           cube[61], cube[62], cube[63], cube[64],
-           cube[57], cube[58], cube[59], cube[60],
-           cube[53], cube[54], cube[55], cube[56],
-           cube[49], cube[50], cube[51], cube[52],
-           cube[77], cube[78], cube[79], cube[80],
-           cube[73], cube[74], cube[75], cube[76],
-           cube[69], cube[70], cube[71], cube[72],
-           cube[65], cube[66], cube[67], cube[68],
-           cube[13], cube[14], cube[15], cube[16],
-           cube[9], cube[10], cube[11], cube[12],
-           cube[5], cube[6], cube[7], cube[8],
-           cube[1], cube[2], cube[3], cube[4]]
-
-
-class LookupTable444TsaiPhase3Edges(LookupTable):
-    """
-    lookup-table-4x4x4-step71-tsai-phase3-edges.txt
-    - without symmetry
-    - we use the copy with symmetry I just left this here for the history
-    ===============================================
-    1 steps has 4 entries (0 percent, 0.00x previous step)
-    2 steps has 20 entries (0 percent, 5.00x previous step)
-    3 steps has 140 entries (0 percent, 7.00x previous step)
-    4 steps has 1,141 entries (0 percent, 8.15x previous step)
-    5 steps has 8,059 entries (0 percent, 7.06x previous step)
-    6 steps has 62,188 entries (0 percent, 7.72x previous step)
-    7 steps has 442,293 entries (0 percent, 7.11x previous step)
-    8 steps has 2,958,583 entries (1 percent, 6.69x previous step)
-    9 steps has 17,286,512 entries (7 percent, 5.84x previous step)
-    10 steps has 69,004,356 entries (28 percent, 3.99x previous step)
-    11 steps has 122,416,936 entries (51 percent, 1.77x previous step)
-    12 steps has 27,298,296 entries (11 percent, 0.22x previous step)
-    13 steps has 22,272 entries (0 percent, 0.00x previous step)
-
-    Total: 239,500,800 entries
-
-
-    lookup-table-4x4x4-step71-tsai-phase3-edges.txt
-    - with symmetry
-    ===============================================
-    1 steps has 3 entries (0 percent, 0.00x previous step)
-    2 steps has 7 entries (0 percent, 2.33x previous step)
-    3 steps has 24 entries (0 percent, 3.43x previous step)
-    4 steps has 103 entries (0 percent, 4.29x previous step)
-    5 steps has 619 entries (0 percent, 6.01x previous step)
-    6 steps has 4,287 entries (0 percent, 6.93x previous step)
-    7 steps has 28,697 entries (0 percent, 6.69x previous step)
-    8 steps has 187,493 entries (1 percent, 6.53x previous step)
-    9 steps has 1,087,267 entries (7 percent, 5.80x previous step)
-    10 steps has 4,323,558 entries (28 percent, 3.98x previous step)
-    11 steps has 7,657,009 entries (51 percent, 1.77x previous step)
-    12 steps has 1,708,625 entries (11 percent, 0.22x previous step)
-    13 steps has 1,448 entries (0 percent, 0.00x previous step)
-
-    Total: 14,999,140 entries
-    """
-
-    def __init__(self, parent):
-        LookupTable.__init__(
-            self,
-            parent,
-            'lookup-table-4x4x4-step71-tsai-phase3-edges.txt',
-            '213098ba6574',
-            linecount=14999140)
-
-    def state(self):
-        parent_state = self.parent.state
-        original_state = list('x' + ''.join(parent_state[1:]))
-        results = []
-
-        for seq in symmetry_rotations_tsai_phase3_444:
-            state = original_state[:]
-
-            for step in seq.split():
-                if step == 'reflect-x':
-                    state = reflect_x_444(state[:])
-                else:
-                    state = rotate_444(state[:], step)
-
-            state = edges_high_low_recolor_444(state[:])
-
-            # record the state of all edges
-            state = ''.join(state)
-            state = ''.join((state[2],   state[9],  state[8],  state[15],
-                             state[25], state[24],
-                             state[57], state[56],
-                             state[82], state[89], state[88], state[95]))
-            results.append(state[:])
-
-        results = sorted(results)
-        return results[0]
-
-
-class LookupTable444TsaiPhase3CentersSolve(LookupTable):
-    """
-    lookup-table-4x4x4-step72-tsai-phase3-centers.txt
-    =================================================
-    1 steps has 4 entries (0 percent, 0.00x previous step)
-    2 steps has 34 entries (0 percent, 8.50x previous step)
-    3 steps has 247 entries (0 percent, 7.26x previous step)
-    4 steps has 1,282 entries (2 percent, 5.19x previous step)
-    5 steps has 4,844 entries (8 percent, 3.78x previous step)
-    6 steps has 11,821 entries (20 percent, 2.44x previous step)
-    7 steps has 17,486 entries (29 percent, 1.48x previous step)
-    8 steps has 15,121 entries (25 percent, 0.86x previous step)
-    9 steps has 6,889 entries (11 percent, 0.46x previous step)
-    10 steps has 1,063 entries (1 percent, 0.15x previous step)
-    11 steps has 9 entries (0 percent, 0.01x previous step)
-
-    Total: 58,800 entries
-    """
-
-    def __init__(self, parent):
-        LookupTable.__init__(
-            self,
-            parent,
-            'lookup-table-4x4x4-step72-tsai-phase3-centers.txt',
-            'UUUULLLLFFFFRRRRBBBBDDDD',
-            linecount=58800)
-
-    def state(self):
-        parent_state = self.parent.state
-
-        result = [
-            # Upper
-            parent_state[6],
-            parent_state[7],
-            parent_state[10],
-            parent_state[11],
-
-            # Left
-            parent_state[22],
-            parent_state[23],
-            parent_state[26],
-            parent_state[27],
-
-            # Front
-            parent_state[38],
-            parent_state[39],
-            parent_state[42],
-            parent_state[43],
-
-            # Right
-            parent_state[54],
-            parent_state[55],
-            parent_state[58],
-            parent_state[59],
-
-            # Back
-            parent_state[70],
-            parent_state[71],
-            parent_state[74],
-            parent_state[75],
-
-            # Down
-            parent_state[86],
-            parent_state[87],
-            parent_state[90],
-            parent_state[91]
-        ]
-
-        result = ''.join(result)
-        return result
-
-
-class LookupTableIDA444TsaiPhase3(LookupTableIDA):
-    """
-    lookup-table-4x4x4-step70-tsai-phase3.txt
-    ==========================================
-    1 steps has 4 entries (0 percent, 0.00x previous step)
-    2 steps has 34 entries (0 percent, 8.50x previous step)
-    3 steps has 371 entries (0 percent, 10.91x previous step)
-    4 steps has 3,834 entries (0 percent, 10.33x previous step)
-    5 steps has 38,705 entries (0 percent, 10.10x previous step)
-    6 steps has 385,795 entries (8 percent, 9.97x previous step)
-    7 steps has 3,884,999 entries (90 percent, 10.07x previous step)
-
-    Total: 4,313,742 entries
-    """
-
-    def __init__(self, parent):
-        LookupTableIDA.__init__(
-            self,
-            parent,
-            'lookup-table-4x4x4-step70-tsai-phase3.txt',
-            'UUUULLLLFFFFRRRRBBBBDDDD10425376a8b9ecfdhgkiljnm',
-            moves_4x4x4,
-
-            # illegal moves
-            ("Fw", "Fw'",
-             "Uw", "Uw'",
-             "Rw", "Rw'",
-             "Lw", "Lw'", "Lw2",
-             "Bw", "Bw'", "Bw2",
-             "Dw", "Dw'", "Dw2",
-             "R", "R'",
-             "L", "L'"),
-
-            # prune tables
-            (parent.lt_tsai_phase3_edges_solve,
-             parent.lt_tsai_phase3_centers_solve),
-            linecount=4313742)
-
-    def state(self):
-        state = edges_recolor_pattern_444(self.parent.state[:])
-        centers_state = ''.join([state[square_index] for square_index in centers_444])
-        edges_state = ''.join([state[square_index] for square_index in wings_444])
-        return centers_state + edges_state
-
-
 class LookupTable444Edges(LookupTable):
     """
-    lookup-table-4x4x4-step100-edges.txt (10-deep)
+    lookup-table-4x4x4-step110-edges.txt (11-deep)
     ==============================================
     2 steps has 1 entries (0 percent, 0.00x previous step)
     5 steps has 432 entries (0 percent, 432.00x previous step)
     6 steps has 2,053 entries (0 percent, 4.75x previous step)
     7 steps has 15,475 entries (0 percent, 7.54x previous step)
-    8 steps has 151,530 entries (2 percent, 9.79x previous step)
-    9 steps has 991,027 entries (13 percent, 6.54x previous step)
-    10 steps has 6,203,073 entries (84 percent, 6.26x previous step)
+    8 steps has 151,530 entries (0 percent, 9.79x previous step)
+    9 steps has 991,027 entries (1 percent, 6.54x previous step)
+    10 steps has 6,203,073 entries (9 percent, 6.26x previous step)
+    11 steps has 56,560,361 entries (88 percent, 9.12x previous step)
 
-    Total: 7,363,591 entries
-    Average: 9.816544 moves
-
-
-    lookup-table-4x4x4-step100-edges.txt (11-deep)
-    ==============================================
-    2 steps has 1 entries (0 percent, 0.00x previous step)
-    5 steps has 432 entries (0 percent, 432.00x previous step)
-    6 steps has 2053 entries (0 percent, 4.75x previous step)
-    7 steps has 15475 entries (0 percent, 7.54x previous step)
-    8 steps has 151530 entries (0 percent, 9.79x previous step)
-    9 steps has 991027 entries (2 percent, 6.54x previous step)
-    10 steps has 6203073 entries (17 percent, 6.26x previous step)
-    11 steps has 27990511 entries (79 percent, 4.51x previous step)
-
-    Total: 35354102 entries
-    Average: 10.753509 moves
+    Total: 63,923,952 entries
+    Average: 10.863674 moves
     """
 
     def __init__(self, parent):
         LookupTable.__init__(
             self,
             parent,
-            'lookup-table-4x4x4-step100-edges.txt',
+            'lookup-table-4x4x4-step110-edges.txt',
             '111111111111_10425376a8b9ecfdhgkiljnm',
             linecount=7363591) # 10-deep
-            #linecount=35354102) # 11-deep
+            #linecount=63923952) # 11-deep
 
 
 class RubiksCube444(RubiksCube):
@@ -998,7 +602,6 @@ class RubiksCube444(RubiksCube):
     def __init__(self, state, order, colormap=None, avoid_pll=True, debug=False):
         RubiksCube.__init__(self, state, order, colormap, debug)
         self.avoid_pll = avoid_pll
-        self.edge_mapping = {}
 
         if debug:
             log.setLevel(logging.DEBUG)
@@ -1058,250 +661,150 @@ class RubiksCube444(RubiksCube):
             return
         self.lt_init_called = True
 
-        # brainstorm
-        # Today we typically stage all centers and then solve them
-        # - Staging is 24!/(8! * 8! * 8!) or 9,465,511,770
-        # - We have three prune tables (UD, LR, and FB) of 24!/(8! * 16!) or 735,471
-        #
-        # option #1 - solve all centers at once
-        # - would be 24!/(4! * 4! * 4! * 4! * 4! * 4!) or 3,246,670,537,110,000
-        # - three prune tables (UD, LR, and FB) of 24!/(4! * 4! * 16!) or 51,482,970
-        # - 51,482,970 / 3,246,670,537,110,000 is 0.000 000 015 8571587, IDA might take a few hours
-        # - I've done this before and it removes ~6 steps when solving centers. We
-        #   currently average 64 steps to solve a 4x4x4 but the tsai solver averages 55....so
-        #   this would take a few hours to run but solutions still wouldn't be as short as
-        #   the tsai solver.
-        # - feasible but not worth it
-        #
-        #
-        # option #2 - combine tsai phases 1 and 2
-        # - this would be staging UD, FB centers, solving LR centers and orienting all edges
-        # - orienting edges is 2,704,156
-        # - centers is 24!/(4! * 4! * 8! * 8!) or 662,585,823,900
-        # - so would be 662,585,823,900 * 2,704,156 or 1,791,735,431,214,128,400
-        # - 2,704,156 / 1,791,735,431,214,128,400 or 0.000 000 000 001 5092, IDA might take weeks
-        # - 662,585,823,900 / 1,791,735,431,214,128,400 or 0.000 000 369 8011505, IDA would be
-        #   fast but that is with a 662 billion entry prune table
-        # - a LR prune table would be 24!/(4! * 4! * 16!) or 51,482,970
-        #   - 51,482,970 / 1,791,735,431,214,128,400 or 0.000 000 000 028 7336, IDA might take weeks
-        # - a UDFB prune table would be 24!/(8! * 8! * 8!) or 9,465,511,770
-        #   - 9,465,511,770 / 1,791,735,431,214,128,400 or 0.000 000 005 2828736, IDA would take a few hours
-        #     9 billion would be a huge prune table
-        # - probably not feasible
-
-
-        # There are three CPU "modes" we can run in:
-        #
-        # normal : Uses a middle ground of CPU and produces not the shortest or longest solution.
-        #          This will stage all centers at once.
-        #
-        # max    : Uses more CPU and produce a shorter solution
-        #          This will stage all centers at once.
-        #
-        # tsai   : Uses the most CPU but produces the shortest solution
-
         # ==============
         # Phase 1 tables
         # ==============
-        if self.cpu_mode in ('normal', 'max'):
+        # prune tables
 
-            # prune tables
-            self.lt_UD_centers_stage = LookupTable444UDCentersStage(self)
-            self.lt_LR_centers_stage = LookupTable444LRCentersStage(self)
-            self.lt_FB_centers_stage = LookupTable444FBCentersStage(self)
+        # Solving 50 cubes where you binary search through the prune table files takes 57s
+        # Solving 50 cubes using the cost-only tables takes 30s!!
+        self.lt_UD_centers_stage = LookupTable444UDCentersStageCostOnly(self)
+        self.lt_LR_centers_stage = LookupTable444LRCentersStageCostOnly(self)
+        self.lt_FB_centers_stage = LookupTable444FBCentersStageCostOnly(self)
 
-            # Stage all centers via IDA
-            self.lt_ULFRBD_centers_stage = LookupTableIDA444ULFRBDCentersStage(self)
-
-        elif self.cpu_mode == 'tsai':
-
-            # Stage LR centers
-            self.lt_tsai_phase1 = LookupTable444TsaiPhase1(self)
-
-        else:
-            raise Exception("We should not be here, cpu_mode %s" % self.cpu_mode)
+        # Stage all centers via IDA
+        self.lt_ULFRBD_centers_stage = LookupTableIDA444ULFRBDCentersStage(self)
+        self.lt_ULFRBD_centers_stage.avoid_oll = True
 
         # =============
         # Phase2 tables
         # =============
-        if self.cpu_mode in ('normal', 'max'):
-            self.lt_ULFRBD_centers_solve = LookupTable444ULFRBDCentersSolve(self)
+        self.lt_ULFRBD_centers_solve = LookupTable444ULFRBDCentersSolve(self)
+        self.lt_ULFRBD_centers_solve_pair_two_edges = LookupTable444ULFRBDCentersSolvePairTwoEdges(self)
+        #self.lt_ULFRBD_centers_solve_edges_stage = LookupTable444ULFRBDCentersSolveEdgesStage(self)
 
-        elif self.cpu_mode == 'tsai':
-            # - orient the edges into high/low groups
-            # - solve LR centers to one of 12 states
-            # - stage UD and FB centers
-            self.lt_tsai_phase2_centers = LookupTable444TsaiPhase2Centers(self)
-            self.lt_tsai_phase2 = LookupTableIDA444TsaiPhase2(self)
-            #self.lt_tsai_phase2_centers.preload_cache()
-
-        else:
-            raise Exception("We should not be here, cpu_mode %s" % self.cpu_mode)
-
-        # =============
-        # Phase3 tables
-        # =============
-        if self.cpu_mode in ('normal', 'max'):
-            pass
-
-        elif self.cpu_mode == 'tsai':
-
-            # prune tables
-            self.lt_tsai_phase3_edges_solve = LookupTable444TsaiPhase3Edges(self)
-            self.lt_tsai_phase3_centers_solve = LookupTable444TsaiPhase3CentersSolve(self)
-            self.lt_tsai_phase3 = LookupTableIDA444TsaiPhase3(self)
-
-        else:
-            raise Exception("We should not be here, cpu_mode %s" % self.cpu_mode)
-
-        # For tsai this tables is only used if the centers have already been solved
-        # For non-tsai it is always used
+        # Edges table
         self.lt_edges = LookupTable444Edges(self)
-
-    def tsai_phase2_orient_edges_state(self, edges_to_flip, return_hex):
-        state = self.state
-        result = []
-
-        wing_str_map = {
-            'UB' : 'UB',
-            'BU' : 'UB',
-            'UL' : 'UL',
-            'LU' : 'UL',
-            'UR' : 'UR',
-            'RU' : 'UR',
-            'UF' : 'UF',
-            'FU' : 'UF',
-            'LB' : 'LB',
-            'BL' : 'LB',
-            'LF' : 'LF',
-            'FL' : 'LF',
-            'RB' : 'RB',
-            'BR' : 'RB',
-            'RF' : 'RF',
-            'FR' : 'RF',
-            'DB' : 'DB',
-            'BD' : 'DB',
-            'DL' : 'DL',
-            'LD' : 'DL',
-            'DR' : 'DR',
-            'RD' : 'DR',
-            'DF' : 'DF',
-            'FD' : 'DF',
-        }
-
-        for (x, y) in (
-                (2, 67), (3, 66), (5, 18), (8, 51), (9, 19), (12, 50), (14, 34),
-                (15, 35), (18, 5), (19, 9), (21, 72), (24, 37), (25, 76), (28, 41),
-                (30, 89), (31, 85), (34, 14), (35, 15), (37, 24), (40, 53), (41, 28),
-                (44, 57), (46, 82), (47, 83), (50, 12), (51, 8), (53, 40), (56, 69),
-                (57, 44), (60, 73), (62, 88), (63, 92), (66, 3), (67, 2), (69, 56),
-                (72, 21), (73, 60), (76, 25), (78, 95), (79, 94), (82, 46), (83, 47),
-                (85, 31), (88, 62), (89, 30), (92, 63), (94, 79), (95, 78)):
-            state_x = state[x]
-            state_y = state[y]
-            wing_str = wing_str_map[''.join((state_x, state_y))]
-            high_low = tsai_phase2_orient_edges_444[(x, y, state_x, state_y)]
-
-            if wing_str in edges_to_flip:
-                if high_low == 'U':
-                    high_low = 'D'
-                else:
-                    high_low = 'U'
-
-            if return_hex:
-                high_low = high_low.replace('D', '0').replace('U', '1')
-
-            result.append(high_low)
-
-        result = ''.join(result)
-
-        if return_hex:
-            return "%012x" % int(result, 2)
-        else:
-            return result
-
-    def tsai_phase2_orient_edges_print(self):
-
-        # save cube state
-        original_state = self.state[:]
-        original_solution = self.solution[:]
-
-        self.nuke_corners()
-        self.nuke_centers()
-
-        orient_edge_state = list(self.tsai_phase2_orient_edges_state(self.edge_mapping, return_hex=False))
-        orient_edge_state_index = 0
-        for side in list(self.sides.values()):
-            for square_index in side.edge_pos:
-                self.state[square_index] = orient_edge_state[orient_edge_state_index]
-                orient_edge_state_index += 1
-        self.print_cube()
-
-        self.state = original_state[:]
-        self.solution = original_solution[:]
 
     def group_centers_guts(self):
         self.lt_init()
 
-        # The non-tsai solver will only solve the centers here
-        if self.cpu_mode in ('normal', 'max'):
+        # If the centers are already solved then return and let group_edges() pair the edges
+        if self.centers_solved():
+            return
 
-            # If the centers are already solve then return and let group_edges() pair the edges
-            if self.centers_solved():
-                return
+        # Stage all centers then solve all centers...averages 18.12 moves
+        log.info("%s: Start of Phase1" % self)
+        #self.lt_ULFRBD_centers_stage.ida_all_the_way = True
+        self.lt_ULFRBD_centers_stage.solve()
+        self.rotate_for_best_centers_solving()
+        self.print_cube()
+        log.info("%s: End of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
+        log.info("")
 
-            log.info("%s: Start of Phase1" % self)
-            self.lt_ULFRBD_centers_stage.avoid_oll = True
-            self.lt_ULFRBD_centers_stage.solve()
-            self.print_cube()
-            log.info("%s: End of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
-            log.info("")
+        # If the centers were already staged we may not be able to avoid OLL when solving the centers
+        if self.get_solution_len_minus_rotates(self.solution) == 0:
+            self.lt_ULFRBD_centers_solve_pair_two_edges.avoid_oll = False
+        else:
+            self.lt_ULFRBD_centers_solve_pair_two_edges.avoid_oll = True
 
-            log.info("%s: Start of Phase2, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
-            self.lt_ULFRBD_centers_solve.solve()
-            self.print_cube()
-            log.info("%s: End of Phase2, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
-            log.info("")
+        log.info("%s: Start of Phase2, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
+        #self.lt_ULFRBD_centers_solve.solve()
+        self.lt_ULFRBD_centers_solve_pair_two_edges.solve()
 
-        # The tsai will solve the centers and pair the edges
-        elif self.cpu_mode == 'tsai':
+        # This will IDA search for a centers solution that happens to put the
+        # edges in a state that are in our table.  It works and produces
+        # solutions in the 50-53 range but can take a few minutes.
+        #self.lt_ULFRBD_centers_solve_edges_stage.solve()
+        self.rotate_U_to_U()
+        self.rotate_F_to_F()
+        self.print_cube()
+        log.info("%s: End of Phase2, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
+        log.info("")
 
-            # save cube state
-            original_state = self.state[:]
-            original_solution = self.solution[:]
+    def solve_all_edges_444(self, use_bfs, apply_steps_if_found):
 
-            log.info("%s: Start of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
-            self.lt_tsai_phase1.solve()
-            self.print_cube()
-            log.info("%s: End of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
+        # Remember what things looked like
+        original_state = self.state[:]
+        original_solution = self.solution[:]
 
-            # Test the prune table
-            #self.lt_tsai_phase2_centers.solve()
-            #self.tsai_phase2_orient_edges_print()
-            #self.print_cube()
-            #sys.exit(0)
+        outer_layer_moves = (
+            "U", "U'", "U2",
+            "L", "L'", "L2",
+            "F", "F'", "F2",
+            "R", "R'", "R2",
+            "B", "B'", "B2",
+            "D", "D'", "D2",
+        )
+        pre_steps_to_try = []
+        pre_steps_to_try.append([])
 
-            log.info("%s: Start of Phase2, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
-            self.lt_tsai_phase2.avoid_oll = True
-            self.lt_tsai_phase2.avoid_pll = True
-            self.lt_tsai_phase2.solve()
-            self.print_cube()
-            #self.tsai_phase2_orient_edges_print()
-            log.info("%s: End of Phase2, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
+        if use_bfs:
+            for step in outer_layer_moves:
+                pre_steps_to_try.append([step,])
 
-            # Testing the phase3 prune tables
-            #self.lt_tsai_phase3_edges_solve.solve()
-            #self.lt_tsai_phase3_centers_solve.solve()
-            #self.tsai_phase2_orient_edges_print()
-            #self.print_cube()
+            for step1 in outer_layer_moves:
+                for step2 in outer_layer_moves:
+                    if not steps_on_same_face_and_layer(step1, step2):
+                        pre_steps_to_try.append([step1, step2])
 
-            log.info("%s: Start of Phase3, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
-            self.lt_tsai_phase3.avoid_oll = True
-            self.lt_tsai_phase3.avoid_pll = True
-            self.lt_tsai_phase3.solve()
-            self.print_cube()
-            log.info("%s: End of Phase3, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
-            log.info("")
+            for step1 in outer_layer_moves:
+                for step2 in outer_layer_moves:
+                    if not steps_on_same_face_and_layer(step1, step2):
+
+                        for step3 in outer_layer_moves:
+                            if not steps_on_same_face_and_layer(step2, step3):
+                                pre_steps_to_try.append([step1, step2, step3])
+
+            '''
+            for step1 in outer_layer_moves:
+                for step2 in outer_layer_moves:
+                    if not steps_on_same_face_and_layer(step1, step2):
+                        for step3 in outer_layer_moves:
+                            if not steps_on_same_face_and_layer(step2, step3):
+                                for step4 in outer_layer_moves:
+                                    if not steps_on_same_face_and_layer(step3, step4):
+                                        pre_steps_to_try.append([step1, step2, step3, step4])
+
+            '''
+            log.warning("%d pre_steps_to_try" % len(pre_steps_to_try))
+
+        for pre_steps in pre_steps_to_try:
+            #log.info("solve_all_edges_444 trying pre_steps %s" % ' '.join(pre_steps))
+
+            self.state = original_state[:]
+            self.solution = original_solution[:]
+
+            for step in pre_steps:
+                self.rotate(step)
+
+            state = edges_recolor_pattern_444(self.state[:])
+
+            edges_state = ''.join([state[square_index] for square_index in wings_444])
+            signature = get_edges_paired_binary_signature(edges_state)
+            signature_width = len(signature) + 1
+            edges_state = signature + '_' + edges_state
+
+
+            # If our state is in lookup-table-4x4x4-step100-edges.txt then execute
+            # those steps and we are done
+            steps = self.lt_edges.steps(edges_state)
+
+            if steps is not None:
+
+                if apply_steps_if_found:
+                    for step in steps:
+                        self.rotate(step)
+                else:
+                    self.state = original_state[:]
+                    self.solution = original_solution[:]
+
+                return True
+
+        self.state = original_state[:]
+        self.solution = original_solution[:]
+
+        return False
 
     def solve_edges_six_then_six(self):
 
@@ -1353,7 +856,7 @@ class RubiksCube444(RubiksCube):
             signature_width = len(signature) + 1
             edges_state = signature + '_' + edges_state
 
-            log.info("solve_edges_six_then_six loop %d: signature %s" % (loop_count, signature))
+            log.info("%s: solve_edges_six_then_six loop %d: signature %s, edges_paired %d" % (self, loop_count, signature, pre_paired_edges_count))
 
             # Find all of the 'loose' matching entries in our lookup table. 'loose' means the
             # entry will not unpair any of our already paired wings.
@@ -1363,9 +866,9 @@ class RubiksCube444(RubiksCube):
             # This runs much faster (than find_edge_entries_with_loose_signature) because
             # it is only looking over the signatures that are an exact match instead of a
             # loose match. It produces slightly longer solutions but in about 1/6 the time.
-            log.debug("%s: find_edge_entries_with_signature start" % self)
+            log.info("%s: find_edge_entries_with_signature start" % self)
             lines_to_examine = self.lt_edges.find_edge_entries_with_signature(signature)
-            log.debug("%s: find_edge_entries_with_signature end (found %d)" % (self, len(lines_to_examine)))
+            log.info("%s: find_edge_entries_with_signature end (found %d)" % (self, len(lines_to_examine)))
 
             for line in lines_to_examine:
                 (phase1_state, phase1_steps) = line.split(':')
@@ -1387,12 +890,12 @@ class RubiksCube444(RubiksCube):
                         loose_matching_entry.append((wing_pair_count, line))
                         max_wing_pair_count = wing_pair_count
 
-                    elif wing_pair_count == max_wing_pair_count or wing_pair_count >= 4:
+                    elif wing_pair_count == max_wing_pair_count:
                         loose_matching_entry.append((wing_pair_count, line))
 
-            #log.warning("pre_paired_edges_count %d, loose_matching_entry %d" % (pre_paired_edges_count, len(loose_matching_entry)))
-            #log.warning("pre_paired_edges_count %d, loose_matching_entry(%d):\n%s\n" %
-            #    (pre_paired_edges_count, len(loose_matching_entry), pformat(loose_matching_entry)))
+            log.info("%s: loose_matching_entry %d" % (self, len(loose_matching_entry)))
+            #log.warning("loose_matching_entry(%d):\n%s\n" %
+            #    (len(loose_matching_entry), pformat(loose_matching_entry)))
             best_score_states = []
 
             # Now run through each state:steps in loose_matching_entry
@@ -1469,8 +972,8 @@ class RubiksCube444(RubiksCube):
             original_state = self.state[:]
             original_solution = self.solution[:]
 
-            log.info("solve_edges_six_then_six loop %d: went from %d edges to %d edges in %d moves" %
-                (loop_count, pre_paired_edges_count, best_entry[0], len(best_entry[3])))
+            log.info("%s: solve_edges_six_then_six loop %d: went from %d edges to %d edges in %d moves" %
+                (self, loop_count, pre_paired_edges_count, best_entry[0], len(best_entry[3])))
             loop_count += 1
 
     def group_edges(self):
@@ -1480,10 +983,188 @@ class RubiksCube444(RubiksCube):
             return
 
         self.lt_init()
-        self.solve_edges_six_then_six()
+
+        # use_bfs needs more testing...I'm not sure it buys us much
+        if not self.solve_all_edges_444(use_bfs=False, apply_steps_if_found=True):
+            self.solve_edges_six_then_six()
 
         log.info("%s: edges paired, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         self.solution.append('EDGES_GROUPED')
+
+
+def rotate_444_U(cube):
+    return [cube[0],cube[13],cube[9],cube[5],cube[1],cube[14],cube[10],cube[6],cube[2],cube[15],cube[11],cube[7],cube[3],cube[16],cube[12],cube[8],cube[4]] + cube[33:37] + cube[21:33] + cube[49:53] + cube[37:49] + cube[65:69] + cube[53:65] + cube[17:21] + cube[69:97]
+
+def rotate_444_U_prime(cube):
+    return [cube[0],cube[4],cube[8],cube[12],cube[16],cube[3],cube[7],cube[11],cube[15],cube[2],cube[6],cube[10],cube[14],cube[1],cube[5],cube[9],cube[13]] + cube[65:69] + cube[21:33] + cube[17:21] + cube[37:49] + cube[33:37] + cube[53:65] + cube[49:53] + cube[69:97]
+
+def rotate_444_U2(cube):
+    return [cube[0],cube[16],cube[15],cube[14],cube[13],cube[12],cube[11],cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1]] + cube[49:53] + cube[21:33] + cube[65:69] + cube[37:49] + cube[17:21] + cube[53:65] + cube[33:37] + cube[69:97]
+
+def rotate_444_Uw(cube):
+    return [cube[0],cube[13],cube[9],cube[5],cube[1],cube[14],cube[10],cube[6],cube[2],cube[15],cube[11],cube[7],cube[3],cube[16],cube[12],cube[8],cube[4]] + cube[33:41] + cube[25:33] + cube[49:57] + cube[41:49] + cube[65:73] + cube[57:65] + cube[17:25] + cube[73:97]
+
+def rotate_444_Uw_prime(cube):
+    return [cube[0],cube[4],cube[8],cube[12],cube[16],cube[3],cube[7],cube[11],cube[15],cube[2],cube[6],cube[10],cube[14],cube[1],cube[5],cube[9],cube[13]] + cube[65:73] + cube[25:33] + cube[17:25] + cube[41:49] + cube[33:41] + cube[57:65] + cube[49:57] + cube[73:97]
+
+def rotate_444_Uw2(cube):
+    return [cube[0],cube[16],cube[15],cube[14],cube[13],cube[12],cube[11],cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1]] + cube[49:57] + cube[25:33] + cube[65:73] + cube[41:49] + cube[17:25] + cube[57:65] + cube[33:41] + cube[73:97]
+
+def rotate_444_L(cube):
+    return [cube[0],cube[80]] + cube[2:5] + [cube[76]] + cube[6:9] + [cube[72]] + cube[10:13] + [cube[68]] + cube[14:17] + [cube[29],cube[25],cube[21],cube[17],cube[30],cube[26],cube[22],cube[18],cube[31],cube[27],cube[23],cube[19],cube[32],cube[28],cube[24],cube[20],cube[1]] + cube[34:37] + [cube[5]] + cube[38:41] + [cube[9]] + cube[42:45] + [cube[13]] + cube[46:68] + [cube[93]] + cube[69:72] + [cube[89]] + cube[73:76] + [cube[85]] + cube[77:80] + [cube[81],cube[33]] + cube[82:85] + [cube[37]] + cube[86:89] + [cube[41]] + cube[90:93] + [cube[45]] + cube[94:97]
+
+def rotate_444_L_prime(cube):
+    return [cube[0],cube[33]] + cube[2:5] + [cube[37]] + cube[6:9] + [cube[41]] + cube[10:13] + [cube[45]] + cube[14:17] + [cube[20],cube[24],cube[28],cube[32],cube[19],cube[23],cube[27],cube[31],cube[18],cube[22],cube[26],cube[30],cube[17],cube[21],cube[25],cube[29],cube[81]] + cube[34:37] + [cube[85]] + cube[38:41] + [cube[89]] + cube[42:45] + [cube[93]] + cube[46:68] + [cube[13]] + cube[69:72] + [cube[9]] + cube[73:76] + [cube[5]] + cube[77:80] + [cube[1],cube[80]] + cube[82:85] + [cube[76]] + cube[86:89] + [cube[72]] + cube[90:93] + [cube[68]] + cube[94:97]
+
+def rotate_444_L2(cube):
+    return [cube[0],cube[81]] + cube[2:5] + [cube[85]] + cube[6:9] + [cube[89]] + cube[10:13] + [cube[93]] + cube[14:17] + [cube[32],cube[31],cube[30],cube[29],cube[28],cube[27],cube[26],cube[25],cube[24],cube[23],cube[22],cube[21],cube[20],cube[19],cube[18],cube[17],cube[80]] + cube[34:37] + [cube[76]] + cube[38:41] + [cube[72]] + cube[42:45] + [cube[68]] + cube[46:68] + [cube[45]] + cube[69:72] + [cube[41]] + cube[73:76] + [cube[37]] + cube[77:80] + [cube[33],cube[1]] + cube[82:85] + [cube[5]] + cube[86:89] + [cube[9]] + cube[90:93] + [cube[13]] + cube[94:97]
+
+def rotate_444_Lw(cube):
+    return [cube[0],cube[80],cube[79]] + cube[3:5] + [cube[76],cube[75]] + cube[7:9] + [cube[72],cube[71]] + cube[11:13] + [cube[68],cube[67]] + cube[15:17] + [cube[29],cube[25],cube[21],cube[17],cube[30],cube[26],cube[22],cube[18],cube[31],cube[27],cube[23],cube[19],cube[32],cube[28],cube[24],cube[20]] + cube[1:3] + cube[35:37] + cube[5:7] + cube[39:41] + cube[9:11] + cube[43:45] + cube[13:15] + cube[47:67] + [cube[94],cube[93]] + cube[69:71] + [cube[90],cube[89]] + cube[73:75] + [cube[86],cube[85]] + cube[77:79] + [cube[82],cube[81]] + cube[33:35] + cube[83:85] + cube[37:39] + cube[87:89] + cube[41:43] + cube[91:93] + cube[45:47] + cube[95:97]
+
+def rotate_444_Lw_prime(cube):
+    return [cube[0]] + cube[33:35] + cube[3:5] + cube[37:39] + cube[7:9] + cube[41:43] + cube[11:13] + cube[45:47] + cube[15:17] + [cube[20],cube[24],cube[28],cube[32],cube[19],cube[23],cube[27],cube[31],cube[18],cube[22],cube[26],cube[30],cube[17],cube[21],cube[25],cube[29]] + cube[81:83] + cube[35:37] + cube[85:87] + cube[39:41] + cube[89:91] + cube[43:45] + cube[93:95] + cube[47:67] + [cube[14],cube[13]] + cube[69:71] + [cube[10],cube[9]] + cube[73:75] + [cube[6],cube[5]] + cube[77:79] + [cube[2],cube[1],cube[80],cube[79]] + cube[83:85] + [cube[76],cube[75]] + cube[87:89] + [cube[72],cube[71]] + cube[91:93] + [cube[68],cube[67]] + cube[95:97]
+
+def rotate_444_Lw2(cube):
+    return [cube[0]] + cube[81:83] + cube[3:5] + cube[85:87] + cube[7:9] + cube[89:91] + cube[11:13] + cube[93:95] + cube[15:17] + [cube[32],cube[31],cube[30],cube[29],cube[28],cube[27],cube[26],cube[25],cube[24],cube[23],cube[22],cube[21],cube[20],cube[19],cube[18],cube[17],cube[80],cube[79]] + cube[35:37] + [cube[76],cube[75]] + cube[39:41] + [cube[72],cube[71]] + cube[43:45] + [cube[68],cube[67]] + cube[47:67] + [cube[46],cube[45]] + cube[69:71] + [cube[42],cube[41]] + cube[73:75] + [cube[38],cube[37]] + cube[77:79] + [cube[34],cube[33]] + cube[1:3] + cube[83:85] + cube[5:7] + cube[87:89] + cube[9:11] + cube[91:93] + cube[13:15] + cube[95:97]
+
+def rotate_444_F(cube):
+    return cube[0:13] + [cube[32],cube[28],cube[24],cube[20]] + cube[17:20] + [cube[81]] + cube[21:24] + [cube[82]] + cube[25:28] + [cube[83]] + cube[29:32] + [cube[84],cube[45],cube[41],cube[37],cube[33],cube[46],cube[42],cube[38],cube[34],cube[47],cube[43],cube[39],cube[35],cube[48],cube[44],cube[40],cube[36],cube[13]] + cube[50:53] + [cube[14]] + cube[54:57] + [cube[15]] + cube[58:61] + [cube[16]] + cube[62:81] + [cube[61],cube[57],cube[53],cube[49]] + cube[85:97]
+
+def rotate_444_F_prime(cube):
+    return cube[0:13] + [cube[49],cube[53],cube[57],cube[61]] + cube[17:20] + [cube[16]] + cube[21:24] + [cube[15]] + cube[25:28] + [cube[14]] + cube[29:32] + [cube[13],cube[36],cube[40],cube[44],cube[48],cube[35],cube[39],cube[43],cube[47],cube[34],cube[38],cube[42],cube[46],cube[33],cube[37],cube[41],cube[45],cube[84]] + cube[50:53] + [cube[83]] + cube[54:57] + [cube[82]] + cube[58:61] + [cube[81]] + cube[62:81] + [cube[20],cube[24],cube[28],cube[32]] + cube[85:97]
+
+def rotate_444_F2(cube):
+    return cube[0:13] + [cube[84],cube[83],cube[82],cube[81]] + cube[17:20] + [cube[61]] + cube[21:24] + [cube[57]] + cube[25:28] + [cube[53]] + cube[29:32] + [cube[49],cube[48],cube[47],cube[46],cube[45],cube[44],cube[43],cube[42],cube[41],cube[40],cube[39],cube[38],cube[37],cube[36],cube[35],cube[34],cube[33],cube[32]] + cube[50:53] + [cube[28]] + cube[54:57] + [cube[24]] + cube[58:61] + [cube[20]] + cube[62:81] + [cube[16],cube[15],cube[14],cube[13]] + cube[85:97]
+
+def rotate_444_Fw(cube):
+    return cube[0:9] + [cube[31],cube[27],cube[23],cube[19],cube[32],cube[28],cube[24],cube[20]] + cube[17:19] + [cube[85],cube[81]] + cube[21:23] + [cube[86],cube[82]] + cube[25:27] + [cube[87],cube[83]] + cube[29:31] + [cube[88],cube[84],cube[45],cube[41],cube[37],cube[33],cube[46],cube[42],cube[38],cube[34],cube[47],cube[43],cube[39],cube[35],cube[48],cube[44],cube[40],cube[36],cube[13],cube[9]] + cube[51:53] + [cube[14],cube[10]] + cube[55:57] + [cube[15],cube[11]] + cube[59:61] + [cube[16],cube[12]] + cube[63:81] + [cube[61],cube[57],cube[53],cube[49],cube[62],cube[58],cube[54],cube[50]] + cube[89:97]
+
+def rotate_444_Fw_prime(cube):
+    return cube[0:9] + [cube[50],cube[54],cube[58],cube[62],cube[49],cube[53],cube[57],cube[61]] + cube[17:19] + [cube[12],cube[16]] + cube[21:23] + [cube[11],cube[15]] + cube[25:27] + [cube[10],cube[14]] + cube[29:31] + [cube[9],cube[13],cube[36],cube[40],cube[44],cube[48],cube[35],cube[39],cube[43],cube[47],cube[34],cube[38],cube[42],cube[46],cube[33],cube[37],cube[41],cube[45],cube[84],cube[88]] + cube[51:53] + [cube[83],cube[87]] + cube[55:57] + [cube[82],cube[86]] + cube[59:61] + [cube[81],cube[85]] + cube[63:81] + [cube[20],cube[24],cube[28],cube[32],cube[19],cube[23],cube[27],cube[31]] + cube[89:97]
+
+def rotate_444_Fw2(cube):
+    return cube[0:9] + [cube[88],cube[87],cube[86],cube[85],cube[84],cube[83],cube[82],cube[81]] + cube[17:19] + [cube[62],cube[61]] + cube[21:23] + [cube[58],cube[57]] + cube[25:27] + [cube[54],cube[53]] + cube[29:31] + [cube[50],cube[49],cube[48],cube[47],cube[46],cube[45],cube[44],cube[43],cube[42],cube[41],cube[40],cube[39],cube[38],cube[37],cube[36],cube[35],cube[34],cube[33],cube[32],cube[31]] + cube[51:53] + [cube[28],cube[27]] + cube[55:57] + [cube[24],cube[23]] + cube[59:61] + [cube[20],cube[19]] + cube[63:81] + [cube[16],cube[15],cube[14],cube[13],cube[12],cube[11],cube[10],cube[9]] + cube[89:97]
+
+def rotate_444_R(cube):
+    return cube[0:4] + [cube[36]] + cube[5:8] + [cube[40]] + cube[9:12] + [cube[44]] + cube[13:16] + [cube[48]] + cube[17:36] + [cube[84]] + cube[37:40] + [cube[88]] + cube[41:44] + [cube[92]] + cube[45:48] + [cube[96],cube[61],cube[57],cube[53],cube[49],cube[62],cube[58],cube[54],cube[50],cube[63],cube[59],cube[55],cube[51],cube[64],cube[60],cube[56],cube[52],cube[16]] + cube[66:69] + [cube[12]] + cube[70:73] + [cube[8]] + cube[74:77] + [cube[4]] + cube[78:84] + [cube[77]] + cube[85:88] + [cube[73]] + cube[89:92] + [cube[69]] + cube[93:96] + [cube[65]]
+
+def rotate_444_R_prime(cube):
+    return cube[0:4] + [cube[77]] + cube[5:8] + [cube[73]] + cube[9:12] + [cube[69]] + cube[13:16] + [cube[65]] + cube[17:36] + [cube[4]] + cube[37:40] + [cube[8]] + cube[41:44] + [cube[12]] + cube[45:48] + [cube[16],cube[52],cube[56],cube[60],cube[64],cube[51],cube[55],cube[59],cube[63],cube[50],cube[54],cube[58],cube[62],cube[49],cube[53],cube[57],cube[61],cube[96]] + cube[66:69] + [cube[92]] + cube[70:73] + [cube[88]] + cube[74:77] + [cube[84]] + cube[78:84] + [cube[36]] + cube[85:88] + [cube[40]] + cube[89:92] + [cube[44]] + cube[93:96] + [cube[48]]
+
+def rotate_444_R2(cube):
+    return cube[0:4] + [cube[84]] + cube[5:8] + [cube[88]] + cube[9:12] + [cube[92]] + cube[13:16] + [cube[96]] + cube[17:36] + [cube[77]] + cube[37:40] + [cube[73]] + cube[41:44] + [cube[69]] + cube[45:48] + [cube[65],cube[64],cube[63],cube[62],cube[61],cube[60],cube[59],cube[58],cube[57],cube[56],cube[55],cube[54],cube[53],cube[52],cube[51],cube[50],cube[49],cube[48]] + cube[66:69] + [cube[44]] + cube[70:73] + [cube[40]] + cube[74:77] + [cube[36]] + cube[78:84] + [cube[4]] + cube[85:88] + [cube[8]] + cube[89:92] + [cube[12]] + cube[93:96] + [cube[16]]
+
+def rotate_444_Rw(cube):
+    return cube[0:3] + cube[35:37] + cube[5:7] + cube[39:41] + cube[9:11] + cube[43:45] + cube[13:15] + cube[47:49] + cube[17:35] + cube[83:85] + cube[37:39] + cube[87:89] + cube[41:43] + cube[91:93] + cube[45:47] + cube[95:97] + [cube[61],cube[57],cube[53],cube[49],cube[62],cube[58],cube[54],cube[50],cube[63],cube[59],cube[55],cube[51],cube[64],cube[60],cube[56],cube[52],cube[16],cube[15]] + cube[67:69] + [cube[12],cube[11]] + cube[71:73] + [cube[8],cube[7]] + cube[75:77] + [cube[4],cube[3]] + cube[79:83] + [cube[78],cube[77]] + cube[85:87] + [cube[74],cube[73]] + cube[89:91] + [cube[70],cube[69]] + cube[93:95] + [cube[66],cube[65]]
+
+def rotate_444_Rw_prime(cube):
+    return cube[0:3] + [cube[78],cube[77]] + cube[5:7] + [cube[74],cube[73]] + cube[9:11] + [cube[70],cube[69]] + cube[13:15] + [cube[66],cube[65]] + cube[17:35] + cube[3:5] + cube[37:39] + cube[7:9] + cube[41:43] + cube[11:13] + cube[45:47] + cube[15:17] + [cube[52],cube[56],cube[60],cube[64],cube[51],cube[55],cube[59],cube[63],cube[50],cube[54],cube[58],cube[62],cube[49],cube[53],cube[57],cube[61],cube[96],cube[95]] + cube[67:69] + [cube[92],cube[91]] + cube[71:73] + [cube[88],cube[87]] + cube[75:77] + [cube[84],cube[83]] + cube[79:83] + cube[35:37] + cube[85:87] + cube[39:41] + cube[89:91] + cube[43:45] + cube[93:95] + cube[47:49]
+
+def rotate_444_Rw2(cube):
+    return cube[0:3] + cube[83:85] + cube[5:7] + cube[87:89] + cube[9:11] + cube[91:93] + cube[13:15] + cube[95:97] + cube[17:35] + [cube[78],cube[77]] + cube[37:39] + [cube[74],cube[73]] + cube[41:43] + [cube[70],cube[69]] + cube[45:47] + [cube[66],cube[65],cube[64],cube[63],cube[62],cube[61],cube[60],cube[59],cube[58],cube[57],cube[56],cube[55],cube[54],cube[53],cube[52],cube[51],cube[50],cube[49],cube[48],cube[47]] + cube[67:69] + [cube[44],cube[43]] + cube[71:73] + [cube[40],cube[39]] + cube[75:77] + [cube[36],cube[35]] + cube[79:83] + cube[3:5] + cube[85:87] + cube[7:9] + cube[89:91] + cube[11:13] + cube[93:95] + cube[15:17]
+
+def rotate_444_B(cube):
+    return [cube[0],cube[52],cube[56],cube[60],cube[64]] + cube[5:17] + [cube[4]] + cube[18:21] + [cube[3]] + cube[22:25] + [cube[2]] + cube[26:29] + [cube[1]] + cube[30:52] + [cube[96]] + cube[53:56] + [cube[95]] + cube[57:60] + [cube[94]] + cube[61:64] + [cube[93],cube[77],cube[73],cube[69],cube[65],cube[78],cube[74],cube[70],cube[66],cube[79],cube[75],cube[71],cube[67],cube[80],cube[76],cube[72],cube[68]] + cube[81:93] + [cube[17],cube[21],cube[25],cube[29]]
+
+def rotate_444_B_prime(cube):
+    return [cube[0],cube[29],cube[25],cube[21],cube[17]] + cube[5:17] + [cube[93]] + cube[18:21] + [cube[94]] + cube[22:25] + [cube[95]] + cube[26:29] + [cube[96]] + cube[30:52] + [cube[1]] + cube[53:56] + [cube[2]] + cube[57:60] + [cube[3]] + cube[61:64] + [cube[4],cube[68],cube[72],cube[76],cube[80],cube[67],cube[71],cube[75],cube[79],cube[66],cube[70],cube[74],cube[78],cube[65],cube[69],cube[73],cube[77]] + cube[81:93] + [cube[64],cube[60],cube[56],cube[52]]
+
+def rotate_444_B2(cube):
+    return [cube[0],cube[96],cube[95],cube[94],cube[93]] + cube[5:17] + [cube[64]] + cube[18:21] + [cube[60]] + cube[22:25] + [cube[56]] + cube[26:29] + [cube[52]] + cube[30:52] + [cube[29]] + cube[53:56] + [cube[25]] + cube[57:60] + [cube[21]] + cube[61:64] + [cube[17],cube[80],cube[79],cube[78],cube[77],cube[76],cube[75],cube[74],cube[73],cube[72],cube[71],cube[70],cube[69],cube[68],cube[67],cube[66],cube[65]] + cube[81:93] + [cube[4],cube[3],cube[2],cube[1]]
+
+def rotate_444_Bw(cube):
+    return [cube[0],cube[52],cube[56],cube[60],cube[64],cube[51],cube[55],cube[59],cube[63]] + cube[9:17] + [cube[4],cube[8]] + cube[19:21] + [cube[3],cube[7]] + cube[23:25] + [cube[2],cube[6]] + cube[27:29] + [cube[1],cube[5]] + cube[31:51] + [cube[92],cube[96]] + cube[53:55] + [cube[91],cube[95]] + cube[57:59] + [cube[90],cube[94]] + cube[61:63] + [cube[89],cube[93],cube[77],cube[73],cube[69],cube[65],cube[78],cube[74],cube[70],cube[66],cube[79],cube[75],cube[71],cube[67],cube[80],cube[76],cube[72],cube[68]] + cube[81:89] + [cube[18],cube[22],cube[26],cube[30],cube[17],cube[21],cube[25],cube[29]]
+
+def rotate_444_Bw_prime(cube):
+    return [cube[0],cube[29],cube[25],cube[21],cube[17],cube[30],cube[26],cube[22],cube[18]] + cube[9:17] + [cube[93],cube[89]] + cube[19:21] + [cube[94],cube[90]] + cube[23:25] + [cube[95],cube[91]] + cube[27:29] + [cube[96],cube[92]] + cube[31:51] + [cube[5],cube[1]] + cube[53:55] + [cube[6],cube[2]] + cube[57:59] + [cube[7],cube[3]] + cube[61:63] + [cube[8],cube[4],cube[68],cube[72],cube[76],cube[80],cube[67],cube[71],cube[75],cube[79],cube[66],cube[70],cube[74],cube[78],cube[65],cube[69],cube[73],cube[77]] + cube[81:89] + [cube[63],cube[59],cube[55],cube[51],cube[64],cube[60],cube[56],cube[52]]
+
+def rotate_444_Bw2(cube):
+    return [cube[0],cube[96],cube[95],cube[94],cube[93],cube[92],cube[91],cube[90],cube[89]] + cube[9:17] + [cube[64],cube[63]] + cube[19:21] + [cube[60],cube[59]] + cube[23:25] + [cube[56],cube[55]] + cube[27:29] + [cube[52],cube[51]] + cube[31:51] + [cube[30],cube[29]] + cube[53:55] + [cube[26],cube[25]] + cube[57:59] + [cube[22],cube[21]] + cube[61:63] + [cube[18],cube[17],cube[80],cube[79],cube[78],cube[77],cube[76],cube[75],cube[74],cube[73],cube[72],cube[71],cube[70],cube[69],cube[68],cube[67],cube[66],cube[65]] + cube[81:89] + [cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1]]
+
+def rotate_444_D(cube):
+    return cube[0:29] + cube[77:81] + cube[33:45] + cube[29:33] + cube[49:61] + cube[45:49] + cube[65:77] + cube[61:65] + [cube[93],cube[89],cube[85],cube[81],cube[94],cube[90],cube[86],cube[82],cube[95],cube[91],cube[87],cube[83],cube[96],cube[92],cube[88],cube[84]]
+
+def rotate_444_D_prime(cube):
+    return cube[0:29] + cube[45:49] + cube[33:45] + cube[61:65] + cube[49:61] + cube[77:81] + cube[65:77] + cube[29:33] + [cube[84],cube[88],cube[92],cube[96],cube[83],cube[87],cube[91],cube[95],cube[82],cube[86],cube[90],cube[94],cube[81],cube[85],cube[89],cube[93]]
+
+def rotate_444_D2(cube):
+    return cube[0:29] + cube[61:65] + cube[33:45] + cube[77:81] + cube[49:61] + cube[29:33] + cube[65:77] + cube[45:49] + [cube[96],cube[95],cube[94],cube[93],cube[92],cube[91],cube[90],cube[89],cube[88],cube[87],cube[86],cube[85],cube[84],cube[83],cube[82],cube[81]]
+
+def rotate_444_Dw(cube):
+    return cube[0:25] + cube[73:81] + cube[33:41] + cube[25:33] + cube[49:57] + cube[41:49] + cube[65:73] + cube[57:65] + [cube[93],cube[89],cube[85],cube[81],cube[94],cube[90],cube[86],cube[82],cube[95],cube[91],cube[87],cube[83],cube[96],cube[92],cube[88],cube[84]]
+
+def rotate_444_Dw_prime(cube):
+    return cube[0:25] + cube[41:49] + cube[33:41] + cube[57:65] + cube[49:57] + cube[73:81] + cube[65:73] + cube[25:33] + [cube[84],cube[88],cube[92],cube[96],cube[83],cube[87],cube[91],cube[95],cube[82],cube[86],cube[90],cube[94],cube[81],cube[85],cube[89],cube[93]]
+
+def rotate_444_Dw2(cube):
+    return cube[0:25] + cube[57:65] + cube[33:41] + cube[73:81] + cube[49:57] + cube[25:33] + cube[65:73] + cube[41:49] + [cube[96],cube[95],cube[94],cube[93],cube[92],cube[91],cube[90],cube[89],cube[88],cube[87],cube[86],cube[85],cube[84],cube[83],cube[82],cube[81]]
+
+def rotate_444_x(cube):
+    return [cube[0]] + cube[33:49] + [cube[20],cube[24],cube[28],cube[32],cube[19],cube[23],cube[27],cube[31],cube[18],cube[22],cube[26],cube[30],cube[17],cube[21],cube[25],cube[29]] + cube[81:97] + [cube[61],cube[57],cube[53],cube[49],cube[62],cube[58],cube[54],cube[50],cube[63],cube[59],cube[55],cube[51],cube[64],cube[60],cube[56],cube[52],cube[16],cube[15],cube[14],cube[13],cube[12],cube[11],cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1],cube[80],cube[79],cube[78],cube[77],cube[76],cube[75],cube[74],cube[73],cube[72],cube[71],cube[70],cube[69],cube[68],cube[67],cube[66],cube[65]]
+
+def rotate_444_x_prime(cube):
+    return [cube[0],cube[80],cube[79],cube[78],cube[77],cube[76],cube[75],cube[74],cube[73],cube[72],cube[71],cube[70],cube[69],cube[68],cube[67],cube[66],cube[65],cube[29],cube[25],cube[21],cube[17],cube[30],cube[26],cube[22],cube[18],cube[31],cube[27],cube[23],cube[19],cube[32],cube[28],cube[24],cube[20]] + cube[1:17] + [cube[52],cube[56],cube[60],cube[64],cube[51],cube[55],cube[59],cube[63],cube[50],cube[54],cube[58],cube[62],cube[49],cube[53],cube[57],cube[61],cube[96],cube[95],cube[94],cube[93],cube[92],cube[91],cube[90],cube[89],cube[88],cube[87],cube[86],cube[85],cube[84],cube[83],cube[82],cube[81]] + cube[33:49]
+
+def rotate_444_y(cube):
+    return [cube[0],cube[13],cube[9],cube[5],cube[1],cube[14],cube[10],cube[6],cube[2],cube[15],cube[11],cube[7],cube[3],cube[16],cube[12],cube[8],cube[4]] + cube[33:81] + cube[17:33] + [cube[84],cube[88],cube[92],cube[96],cube[83],cube[87],cube[91],cube[95],cube[82],cube[86],cube[90],cube[94],cube[81],cube[85],cube[89],cube[93]]
+
+def rotate_444_y_prime(cube):
+    return [cube[0],cube[4],cube[8],cube[12],cube[16],cube[3],cube[7],cube[11],cube[15],cube[2],cube[6],cube[10],cube[14],cube[1],cube[5],cube[9],cube[13]] + cube[65:81] + cube[17:65] + [cube[93],cube[89],cube[85],cube[81],cube[94],cube[90],cube[86],cube[82],cube[95],cube[91],cube[87],cube[83],cube[96],cube[92],cube[88],cube[84]]
+
+def rotate_444_z(cube):
+    return [cube[0],cube[29],cube[25],cube[21],cube[17],cube[30],cube[26],cube[22],cube[18],cube[31],cube[27],cube[23],cube[19],cube[32],cube[28],cube[24],cube[20],cube[93],cube[89],cube[85],cube[81],cube[94],cube[90],cube[86],cube[82],cube[95],cube[91],cube[87],cube[83],cube[96],cube[92],cube[88],cube[84],cube[45],cube[41],cube[37],cube[33],cube[46],cube[42],cube[38],cube[34],cube[47],cube[43],cube[39],cube[35],cube[48],cube[44],cube[40],cube[36],cube[13],cube[9],cube[5],cube[1],cube[14],cube[10],cube[6],cube[2],cube[15],cube[11],cube[7],cube[3],cube[16],cube[12],cube[8],cube[4],cube[68],cube[72],cube[76],cube[80],cube[67],cube[71],cube[75],cube[79],cube[66],cube[70],cube[74],cube[78],cube[65],cube[69],cube[73],cube[77],cube[61],cube[57],cube[53],cube[49],cube[62],cube[58],cube[54],cube[50],cube[63],cube[59],cube[55],cube[51],cube[64],cube[60],cube[56],cube[52]]
+
+def rotate_444_z_prime(cube):
+    return [cube[0],cube[52],cube[56],cube[60],cube[64],cube[51],cube[55],cube[59],cube[63],cube[50],cube[54],cube[58],cube[62],cube[49],cube[53],cube[57],cube[61],cube[4],cube[8],cube[12],cube[16],cube[3],cube[7],cube[11],cube[15],cube[2],cube[6],cube[10],cube[14],cube[1],cube[5],cube[9],cube[13],cube[36],cube[40],cube[44],cube[48],cube[35],cube[39],cube[43],cube[47],cube[34],cube[38],cube[42],cube[46],cube[33],cube[37],cube[41],cube[45],cube[84],cube[88],cube[92],cube[96],cube[83],cube[87],cube[91],cube[95],cube[82],cube[86],cube[90],cube[94],cube[81],cube[85],cube[89],cube[93],cube[77],cube[73],cube[69],cube[65],cube[78],cube[74],cube[70],cube[66],cube[79],cube[75],cube[71],cube[67],cube[80],cube[76],cube[72],cube[68],cube[20],cube[24],cube[28],cube[32],cube[19],cube[23],cube[27],cube[31],cube[18],cube[22],cube[26],cube[30],cube[17],cube[21],cube[25],cube[29]]
+
+rotate_mapper_444 = {
+    "B" : rotate_444_B,
+    "B'" : rotate_444_B_prime,
+    "B2" : rotate_444_B2,
+    "Bw" : rotate_444_Bw,
+    "Bw'" : rotate_444_Bw_prime,
+    "Bw2" : rotate_444_Bw2,
+    "D" : rotate_444_D,
+    "D'" : rotate_444_D_prime,
+    "D2" : rotate_444_D2,
+    "Dw" : rotate_444_Dw,
+    "Dw'" : rotate_444_Dw_prime,
+    "Dw2" : rotate_444_Dw2,
+    "F" : rotate_444_F,
+    "F'" : rotate_444_F_prime,
+    "F2" : rotate_444_F2,
+    "Fw" : rotate_444_Fw,
+    "Fw'" : rotate_444_Fw_prime,
+    "Fw2" : rotate_444_Fw2,
+    "L" : rotate_444_L,
+    "L'" : rotate_444_L_prime,
+    "L2" : rotate_444_L2,
+    "Lw" : rotate_444_Lw,
+    "Lw'" : rotate_444_Lw_prime,
+    "Lw2" : rotate_444_Lw2,
+    "R" : rotate_444_R,
+    "R'" : rotate_444_R_prime,
+    "R2" : rotate_444_R2,
+    "Rw" : rotate_444_Rw,
+    "Rw'" : rotate_444_Rw_prime,
+    "Rw2" : rotate_444_Rw2,
+    "U" : rotate_444_U,
+    "U'" : rotate_444_U_prime,
+    "U2" : rotate_444_U2,
+    "Uw" : rotate_444_Uw,
+    "Uw'" : rotate_444_Uw_prime,
+    "Uw2" : rotate_444_Uw2,
+    "x" : rotate_444_x,
+    "x'" : rotate_444_x_prime,
+    "y" : rotate_444_y,
+    "y'" : rotate_444_y_prime,
+    "z" : rotate_444_z,
+    "z'" : rotate_444_z_prime,
+}
+
+def rotate_444(cube, step):
+    return rotate_mapper_444[step](cube)
 
 
 if __name__ == '__main__':

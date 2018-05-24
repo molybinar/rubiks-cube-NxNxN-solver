@@ -1,23 +1,45 @@
 
-from collections import OrderedDict
-from pprint import pformat
 from rubikscubennnsolver.RubiksCubeNNNOddEdges import RubiksCubeNNNOddEdges
 from rubikscubennnsolver.RubiksCube555 import RubiksCube555, solved_5x5x5
 from rubikscubennnsolver.RubiksCube666 import RubiksCube666, solved_6x6x6, moves_6x6x6
-from rubikscubennnsolver.RubiksSide import Side, SolveError
 from rubikscubennnsolver.LookupTable import LookupTable, LookupTableIDA
 import logging
-import math
-import os
-import random
-import re
-import subprocess
 import sys
 
 log = logging.getLogger(__name__)
 
 moves_7x7x7 = moves_6x6x6
 solved_7x7x7 = 'UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUURRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB'
+
+step80_centers_777 = (
+    # Left
+    59, 60, 61,
+    65, 66, 67, 68, 69,
+    72, 73, 74, 75, 76,
+    79, 80, 81, 82, 83,
+    87, 88, 89,
+
+    # Front
+    108, 109, 110,
+    114, 115, 116, 117, 118,
+    121, 122, 123, 124, 125,
+    128, 129, 130, 131, 132,
+    136, 137, 138,
+
+    # Right
+    157, 158, 159,
+    163, 164, 165, 166, 167,
+    170, 171, 172, 173, 174,
+    177, 178, 179, 180, 181,
+    185, 186, 187,
+
+    # Back
+    206, 207, 208,
+    212, 213, 214, 215, 216,
+    219, 220, 221, 222, 223,
+    226, 227, 228, 229, 230,
+    234, 235, 236,
+)
 
 
 class LookupTable777UDObliqueEdgePairingMiddleOnly(LookupTable):
@@ -47,7 +69,8 @@ class LookupTable777UDObliqueEdgePairingMiddleOnly(LookupTable):
             parent,
             'lookup-table-7x7x7-step11-UD-oblique-edge-pairing-middle-only.txt',
             '462000000000000462',
-            linecount=735471)
+            linecount=735471,
+            max_depth=11)
 
     def state(self):
         parent_state = self.parent.state
@@ -130,7 +153,8 @@ class LookupTable777UDObliqueEdgePairingLeftOnly(LookupTable):
             parent,
             'lookup-table-7x7x7-step12-UD-oblique-edge-pairing-left-only.txt',
             '891000000000000891',
-            linecount=735471)
+            linecount=735471,
+            max_depth=11)
 
     def state(self):
         parent_state = self.parent.state
@@ -213,7 +237,8 @@ class LookupTable777UDObliqueEdgePairingRightOnly(LookupTable):
             parent,
             'lookup-table-7x7x7-step13-UD-oblique-edge-pairing-right-only.txt',
             '30c00000000000030c',
-            linecount=735471)
+            linecount=735471,
+            max_depth=11)
 
     def state(self):
         parent_state = self.parent.state
@@ -321,7 +346,9 @@ class LookupTableIDA777UDObliqueEdgePairing(LookupTableIDA):
             (parent.lt_UD_oblique_edge_pairing_middle_only,
              parent.lt_UD_oblique_edge_pairing_left_only,
              parent.lt_UD_oblique_edge_pairing_right_only),
-            linecount=5961573)
+
+            linecount=5961573,
+            max_depth=6)
 
     def state(self):
         parent_state = self.parent.state
@@ -401,7 +428,8 @@ class LookupTable777LRObliqueEdgePairingMiddleOnly(LookupTable):
             parent,
             'lookup-table-7x7x7-step21-LR-oblique-edge-pairing-middle-only.txt',
             '462000462000',
-            linecount=12870)
+            linecount=12870,
+            max_depth=10)
 
     def state(self):
         parent_state = self.parent.state
@@ -466,7 +494,8 @@ class LookupTable777LRObliqueEdgePairingLeftOnly(LookupTable):
             parent,
             'lookup-table-7x7x7-step22-LR-oblique-edge-pairing-left-only.txt',
             '891000891000',
-            linecount=12870)
+            linecount=12870,
+            max_depth=9)
 
     def state(self):
         parent_state = self.parent.state
@@ -531,7 +560,8 @@ class LookupTable777LRObliqueEdgePairingRightOnly(LookupTable):
             parent,
             'lookup-table-7x7x7-step23-LR-oblique-edge-pairing-right-only.txt',
             '30c00030c000',
-            linecount=12870)
+            linecount=12870,
+            max_depth=9)
 
     def state(self):
         parent_state = self.parent.state
@@ -611,7 +641,9 @@ class LookupTableIDA777LRObliqueEdgePairing(LookupTableIDA):
             (parent.lt_LR_oblique_edge_pairing_middle_only,
              parent.lt_LR_oblique_edge_pairing_left_only,
              parent.lt_LR_oblique_edge_pairing_right_only),
-            linecount=5044280)
+
+            linecount=5044280,
+            max_depth=8)
 
     def state(self):
         parent_state = self.parent.state
@@ -675,7 +707,8 @@ class LookupTable777UDSolveInnerCentersAndObliqueEdgesCenterOnly(LookupTable):
             parent,
             'lookup-table-7x7x7-step51-UD-solve-inner-center-and-oblique-edges-center-only.txt',
             'xxxxxxUUUxxUxUxxUUUxxxxxxxxxxxxDDDxxDxDxxDDDxxxxxx',
-            linecount=4900)
+            linecount=4900,
+            max_depth=8)
 
     def state(self):
         parent_state = self.parent.state
@@ -792,7 +825,8 @@ class LookupTable777UDSolveInnerCentersAndObliqueEdgesEdgesOnly(LookupTable):
              'xDDDxDxxxDDxxxDDxxxDxUUUxxUUUxDxxxUDxxxUDxxxUxUUUx',
              'xDDDxDxxxDDxxxDDxxxDxUUUxxDDDxUxxxUUxxxUUxxxUxUUUx',
              'xDDDxDxxxDDxxxDDxxxDxDDDxxUUUxUxxxUUxxxUUxxxUxUUUx'),
-            linecount=343000)
+            linecount=343000,
+            max_depth=9)
 
     def state(self):
         parent_state = self.parent.state
@@ -916,7 +950,9 @@ class LookupTableIDA777UDSolveInnerCentersAndObliqueEdges(LookupTableIDA):
             # prune tables
             (parent.lt_UD_solve_inner_centers_and_oblique_edges_center_only,
              parent.lt_UD_solve_inner_centers_and_oblique_edges_edges_only),
-            linecount=4119202)
+
+            linecount=4119202,
+            max_depth=6)
 
     def state(self):
         parent_state = self.parent.state
@@ -1034,7 +1070,8 @@ class LookupTable777LRSolveInnerXCenterTCenterMiddleObliqueEdge(LookupTable):
              'xxRxxxLLLxRLLLRxLLLxxxLxxxxLxxxRRRxRRRRLxRRRxxxLxx',
              'xxRxxxLLLxRLLLRxLLLxxxLxxxxRxxxRRRxLRRRLxRRRxxxLxx',
              'xxRxxxLLLxRLLLRxLLLxxxRxxxxLxxxRRRxLRRRLxRRRxxxLxx'),
-            linecount=343000)
+            linecount=343000,
+            max_depth=11)
 
     def state(self):
         parent_state = self.parent.state
@@ -1155,7 +1192,8 @@ class LookupTable777LRSolveObliqueEdge(LookupTable):
              'xRRRxRxxxRRxxxRRxxxRxLLLxxLLLxRxxxLRxxxLRxxxLxLLLx',
              'xRRRxRxxxRRxxxRRxxxRxLLLxxRRRxLxxxLLxxxLLxxxLxLLLx',
              'xRRRxRxxxRRxxxRRxxxRxRRRxxLLLxLxxxLLxxxLLxxxLxLLLx'),
-            linecount=343000)
+            linecount=343000,
+            max_depth=11)
 
     def state(self):
         parent_state = self.parent.state
@@ -1176,8 +1214,7 @@ class LookupTable777LRSolveObliqueEdge(LookupTable):
             'x', parent_state[185], parent_state[186], parent_state[187], 'x'
         ]
 
-        result = ['x' if x in ('U', 'D', 'F', 'B') else x for x in result]
-        result = ''.join(result)
+        result = ''.join(['x' if x in ('U', 'D', 'F', 'B') else x for x in result])
 
         return result
 
@@ -1283,7 +1320,8 @@ class LookupTableIDA777LRSolveInnerCentersAndObliqueEdges(LookupTableIDA):
             # prune tables
             (parent.lt_LR_solve_inner_x_center_t_center_middle_oblique_edge,
              parent.lt_LR_solve_oblique_edge),
-            linecount=6871798)
+            linecount=6871798,
+            max_depth=8)
 
     def state(self):
         parent_state = self.parent.state
@@ -1304,8 +1342,7 @@ class LookupTableIDA777LRSolveInnerCentersAndObliqueEdges(LookupTableIDA):
             'x', parent_state[185], parent_state[186], parent_state[187], 'x'
         ]
 
-        result = ['x' if x in ('U', 'D', 'F', 'B') else x for x in result]
-        result = ''.join(result)
+        result = ''.join(['x' if x in ('U', 'D', 'F', 'B') else x for x in result])
 
         return result
 
@@ -1404,7 +1441,8 @@ class LookupTable777FBSolveInnerXCenterTCenterMiddleObliqueEdge(LookupTable):
              'xxBxxxFFFxBFFFBxFFFxxxFxxxxFxxxBBBxBBBBFxBBBxxxFxx',
              'xxBxxxFFFxBFFFBxFFFxxxFxxxxBxxxBBBxFBBBFxBBBxxxFxx',
              'xxBxxxFFFxBFFFBxFFFxxxBxxxxFxxxBBBxFBBBFxBBBxxxFxx'),
-            linecount=343000)
+            linecount=343000,
+            max_depth=11)
 
     def state(self):
         parent_state = self.parent.state
@@ -1525,7 +1563,8 @@ class LookupTable777FBSolveObliqueEdge(LookupTable):
              'xBBBxBxxxBBxxxBBxxxBxFFFxxFFFxBxxxFBxxxFBxxxFxFFFx',
              'xBBBxBxxxBBxxxBBxxxBxFFFxxBBBxFxxxFFxxxFFxxxFxFFFx',
              'xBBBxBxxxBBxxxBBxxxBxBBBxxFFFxFxxxFFxxxFFxxxFxFFFx'),
-            linecount=343000)
+            linecount=343000,
+            max_depth=11)
 
     def state(self):
         parent_state = self.parent.state
@@ -1653,7 +1692,8 @@ class LookupTableIDA777FBSolveInnerCentersAndObliqueEdges(LookupTableIDA):
             # prune tables
             (parent.lt_FB_solve_inner_x_center_t_center_middle_oblique_edge,
              parent.lt_FB_solve_oblique_edge),
-            linecount=6871798)
+            linecount=6871798,
+            max_depth=8)
 
     def state(self):
         parent_state = self.parent.state
@@ -1680,18 +1720,83 @@ class LookupTableIDA777FBSolveInnerCentersAndObliqueEdges(LookupTableIDA):
         return result
 
 
+class LookupTableIDA777LFRBSolveInnerCenters(LookupTable):
+    """
+    lookup-table-7x7x7-step81-LFRB-solve-inner-centers.txt
+    ======================================================
+    1 steps has 3 entries (0 percent, 0.00x previous step)
+    2 steps has 25 entries (0 percent, 8.33x previous step)
+    3 steps has 146 entries (0 percent, 5.84x previous step)
+    4 steps has 544 entries (0 percent, 3.73x previous step)
+    5 steps has 2,772 entries (0 percent, 5.10x previous step)
+    6 steps has 13,681 entries (0 percent, 4.94x previous step)
+    7 steps has 57,790 entries (0 percent, 4.22x previous step)
+    8 steps has 227,221 entries (0 percent, 3.93x previous step)
+    9 steps has 797,842 entries (3 percent, 3.51x previous step)
+    10 steps has 2,318,392 entries (9 percent, 2.91x previous step)
+    11 steps has 5,327,072 entries (22 percent, 2.30x previous step)
+    12 steps has 7,922,750 entries (32 percent, 1.49x previous step)
+    13 steps has 5,770,345 entries (24 percent, 0.73x previous step)
+    14 steps has 1,498,471 entries (6 percent, 0.26x previous step)
+    15 steps has 71,950 entries (0 percent, 0.05x previous step)
+    16 steps has 998 entries (0 percent, 0.01x previous step)
+    17 steps has 3 entries (0 percent, 0.00x previous step)
+
+    Total: 24,010,005 entries
+    Average: 11.805268 moves
+    """
+
+    def __init__(self, parent):
+        LookupTable.__init__(
+            self,
+            parent,
+            'lookup-table-7x7x7-step81-LFRB-solve-inner-centers.txt',
+            'LLLLLLLLLFFFFFFFFFRRRRRRRRRBBBBBBBBB',
+            linecount=24010005,
+            max_depth=17)
+
+    def state(self):
+        parent_state = self.parent.state
+
+        result = [
+            # Left
+            parent_state[66], parent_state[67], parent_state[68],
+            parent_state[73], parent_state[74], parent_state[75],
+            parent_state[80], parent_state[81], parent_state[82],
+
+            # Front
+            parent_state[115], parent_state[116], parent_state[117],
+            parent_state[122], parent_state[123], parent_state[124],
+            parent_state[129], parent_state[130], parent_state[131],
+
+            # Right
+            parent_state[164], parent_state[165], parent_state[166],
+            parent_state[171], parent_state[172], parent_state[173],
+            parent_state[178], parent_state[179], parent_state[180],
+
+            # Back
+            parent_state[213], parent_state[214], parent_state[215],
+            parent_state[220], parent_state[221], parent_state[222],
+            parent_state[227], parent_state[228], parent_state[229],
+        ]
+
+        result = ''.join(result)
+        return result
+
+
 class LookupTableIDA777LFRBSolveInnerCentersAndObliqueEdges(LookupTableIDA):
     """
     lookup-table-7x7x7-step80-LFRB-solve-inner-center-and-oblique-edges.txt
     =======================================================================
-    1 steps has 14,700 entries (0 percent, 0.00x previous step)
-    2 steps has 122,500 entries (0 percent, 8.33x previous step)
-    3 steps has 904,680 entries (1 percent, 7.39x previous step)
-    4 steps has 5,805,056 entries (10 percent, 6.42x previous step)
-    5 steps has 40,353,248 entries (75 percent, 6.95x previous step)
-    6 steps has 6,475,862 entries (12 percent, 0.16x previous step)
+    1 steps has 2,993 entries (0 percent, 0.00x previous step)
+    2 steps has 19,085 entries (0 percent, 6.38x previous step)
+    3 steps has 148,529 entries (0 percent, 7.78x previous step)
+    4 steps has 1,054,714 entries (1 percent, 7.10x previous step)
+    5 steps has 7,566,773 entries (11 percent, 7.17x previous step)
+    6 steps has 54,349,943 entries (86 percent, 7.18x previous step)
 
-    Total: 53,676,046 entries
+    Total: 63,142,037 entries
+    Average: 5.838252 moves
     """
 
     def __init__(self, parent):
@@ -1704,6 +1809,8 @@ class LookupTableIDA777LFRBSolveInnerCentersAndObliqueEdges(LookupTableIDA):
 
             ("3Rw", "3Rw'", "3Lw", "3Lw'", "3Fw", "3Fw'", "3Bw", "3Bw'", "3Uw", "3Uw'", "3Dw", "3Dw'", # do not mess up staged centers
              "Rw", "Rw'", "Lw", "Lw'", "Fw", "Fw'", "Bw", "Bw'", "Uw", "Uw'", "Dw", "Dw'",             # do not mess up staged centers
+
+             # 6-deep partial
              "3Rw2", "3Lw2", "3Fw2", "3Bw2", "Rw2", "Lw2", "Fw2", "Bw2",                               # do not mess up solved UD
              "L", "L'", "L2", "R", "R'", "R2"),                                                        # Do not mess up LRs reduced to 5x5x5 centers
 
@@ -1711,45 +1818,19 @@ class LookupTableIDA777LFRBSolveInnerCentersAndObliqueEdges(LookupTableIDA):
             (parent.lt_LR_solve_inner_x_center_t_center_middle_oblique_edge,
              parent.lt_LR_solve_oblique_edge,
              parent.lt_FB_solve_inner_x_center_t_center_middle_oblique_edge,
-             parent.lt_FB_solve_oblique_edge),
+             parent.lt_FB_solve_oblique_edge,
+             parent.lt_LFRB_solve_inner_centers,
 
-            linecount=53676046)
+             parent.lt_LR_solve_inner_centers_and_oblique_edges,
+             parent.lt_FB_solve_inner_centers_and_oblique_edges,
+            ),
+
+            linecount=63142037,  # 6-deep partial
+            max_depth=6)
 
     def state(self):
         parent_state = self.parent.state
-
-        result = [
-            # Left
-            parent_state[59], parent_state[60], parent_state[61],
-            parent_state[65], parent_state[66], parent_state[67], parent_state[68], parent_state[69],
-            parent_state[72], parent_state[73], parent_state[74], parent_state[75], parent_state[76],
-            parent_state[79], parent_state[80], parent_state[81], parent_state[82], parent_state[83],
-            parent_state[87], parent_state[88], parent_state[89],
-
-            # Front
-            parent_state[108], parent_state[109], parent_state[110],
-            parent_state[114], parent_state[115], parent_state[116], parent_state[117], parent_state[118],
-            parent_state[121], parent_state[122], parent_state[123], parent_state[124], parent_state[125],
-            parent_state[128], parent_state[129], parent_state[130], parent_state[131], parent_state[132],
-            parent_state[136], parent_state[137], parent_state[138],
-
-            # Right
-            parent_state[157], parent_state[158], parent_state[159],
-            parent_state[163], parent_state[164], parent_state[165], parent_state[166], parent_state[167],
-            parent_state[170], parent_state[171], parent_state[172], parent_state[173], parent_state[174],
-            parent_state[177], parent_state[178], parent_state[179], parent_state[180], parent_state[181],
-            parent_state[185], parent_state[186], parent_state[187],
-
-            # Back
-            parent_state[206], parent_state[207], parent_state[208],
-            parent_state[212], parent_state[213], parent_state[214], parent_state[215], parent_state[216],
-            parent_state[219], parent_state[220], parent_state[221], parent_state[222], parent_state[223],
-            parent_state[226], parent_state[227], parent_state[228], parent_state[229], parent_state[230],
-            parent_state[234], parent_state[235], parent_state[236],
-        ]
-
-        result = ''.join(result)
-        result = result.replace('L', '1').replace('R', '0').replace('F', '1').replace('B', '0')
+        result = ''.join(['1' if parent_state[x] in ('L', 'F') else '0' for x in step80_centers_777])
 
         # Convert to hex
         return self.hex_format % int(result, 2)
@@ -1926,13 +2007,36 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
         self.lt_FB_solve_oblique_edge = LookupTable777FBSolveObliqueEdge(self)
         self.lt_FB_solve_inner_centers_and_oblique_edges = LookupTableIDA777FBSolveInnerCentersAndObliqueEdges(self)
 
+        self.lt_LFRB_solve_inner_centers = LookupTableIDA777LFRBSolveInnerCenters(self)
         self.lt_LFRB_solve_inner_centers_and_oblique_edges = LookupTableIDA777LFRBSolveInnerCentersAndObliqueEdges(self)
+
+    def create_fake_555_for_LR_t_centers(self):
+
+        # Create a fake 5x5x5 to stage the UD inner 5x5x5 centers
+        fake_555 = RubiksCube555(solved_5x5x5, 'URFDLB')
+        fake_555.lt_init()
+
+        for x in range(1, 151):
+            fake_555.state[x] = 'x'
+
+        # Left
+        fake_555.state[33] = self.state[60]
+        fake_555.state[37] = self.state[72]
+        fake_555.state[39] = self.state[76]
+        fake_555.state[43] = self.state[88]
+
+        # Right
+        fake_555.state[83] = self.state[158]
+        fake_555.state[87] = self.state[170]
+        fake_555.state[89] = self.state[174]
+        fake_555.state[93] = self.state[186]
+
+        return fake_555
 
     def create_fake_555_from_inside_centers(self):
 
         # Create a fake 5x5x5 to stage the UD inner 5x5x5 centers
         fake_555 = RubiksCube555(solved_5x5x5, 'URFDLB')
-        fake_555.cpu_mode = self.cpu_mode
         fake_555.lt_init()
 
         for x in range(1, 151):
@@ -2011,7 +2115,6 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
 
         # Create a fake 5x5x5 to solve 7x7x7 centers (they have been reduced to a 5x5x5)
         fake_555 = RubiksCube555(solved_5x5x5, 'URFDLB')
-        fake_555.cpu_mode = self.cpu_mode
         fake_555.lt_init()
 
         for x in range(1, 151):
@@ -2154,7 +2257,6 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
 
         # Create a fake 6x6x6 to stage the outside UD oblique edges
         fake_666 = RubiksCube666(solved_6x6x6, 'URFDLB')
-        fake_666.cpu_mode = self.cpu_mode
         fake_666.lt_init()
 
         for x in range(1, 217):
@@ -2276,7 +2378,7 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
 
     def group_outside_UD_oblique_edges(self):
         fake_666 = self.create_fake_666_centers()
-        fake_666.group_centers_stage_UD()
+        fake_666.stage_oblique_edges_UD()
 
         for step in fake_666.solution:
 
@@ -2284,10 +2386,13 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
                 step = '7' + step[1:]
 
             self.rotate(step)
+
+        self.rotate_U_to_U()
+        self.rotate_F_to_F()
 
     def group_outside_LR_oblique_edges(self):
         fake_666 = self.create_fake_666_centers()
-        fake_666.lt_LR_oblique_edge_pairing.solve()
+        fake_666.stage_oblique_edges_LR()
 
         for step in fake_666.solution:
 
@@ -2295,14 +2400,17 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
                 step = '7' + step[1:]
 
             self.rotate(step)
+
+        self.rotate_U_to_U()
+        self.rotate_F_to_F()
 
     def group_centers_guts(self, oblique_edges_only=False):
         self.lt_init()
 
         # Uses 5x5x5 solver to stage the inner x-centers and inner t-centers for UD
         self.group_inside_UD_centers()
-        log.info("Inside UD centers staged, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
         self.print_cube()
+        log.info("%s: Inside UD centers staged, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         log.info("")
         log.info("")
         log.info("")
@@ -2310,8 +2418,8 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
 
         # Uses 6x6x6 solver to pair the "outside" oblique edges for UD
         self.group_outside_UD_oblique_edges()
-        log.info("Outside UD oblique edges paired, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
         self.print_cube()
+        log.info("%s: Outside UD oblique edges staged, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         log.info("")
         log.info("")
         log.info("")
@@ -2324,10 +2432,10 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
         #self.print_cube()
         #sys.exit(0)
 
-        # Now pair the "inside" oblique edge with the already paired outside oblique edges...for UD
+        # Now stage the "inside" oblique UD edges with the already staged outside oblique UD edges
         self.lt_UD_oblique_edge_pairing.solve()
-        log.info("UD oblique edges paired, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
         self.print_cube()
+        log.info("%s: UD oblique edges staged, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         log.info("")
         log.info("")
         log.info("")
@@ -2335,8 +2443,8 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
 
         # Uses 5x5x5 solver to stage the inner x-centers and inner t-centers for LR
         self.group_inside_LR_centers()
-        log.info('post group_inside_LR_centers')
         self.print_cube()
+        log.info("%s: Inside LR centers staged, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         log.info("")
         log.info("")
         log.info("")
@@ -2344,8 +2452,8 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
 
         # Uses 6x6x6 solver to pair the "outside" oblique edges for LR
         self.group_outside_LR_oblique_edges()
-        log.info('post group_outside_LR_oblique_edges')
         self.print_cube()
+        log.info("%s: Outside LR oblique edges staged, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         log.info("")
         log.info("")
         log.info("")
@@ -2358,10 +2466,10 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
         #self.print_cube()
         #sys.exit(0)
 
-        # Now pair the "inside" oblique edge with the already paired outside oblique edges...for LR
+        # Now stage the "inside" oblique LR edges with the already staged outside oblique LR edges
         self.lt_LR_oblique_edge_pairing.solve()
-        log.info("inner x-center and oblique edges staged, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
         self.print_cube()
+        log.info("%s: LR oblique edges staged, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         log.info("")
         log.info("")
         log.info("")
@@ -2370,13 +2478,13 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
         # Test pruning tables
         #self.lt_UD_solve_inner_centers_and_oblique_edges_center_only.solve()
         #self.lt_UD_solve_inner_centers_and_oblique_edges_edges_only.solve()
-        #log.info("UD inner-centers solved, UD oblique edges paired, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
+        #log.info("%s: UD inner-centers solved, UD oblique edges paired, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         #self.print_cube()
         #sys.exit(0)
 
         self.lt_UD_solve_inner_centers_and_oblique_edges.solve()
-        log.info("UD inner-centers solved, UD oblique edges paired, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
         self.print_cube()
+        log.info("%s: UD centers reduced to 5x5x5 centers, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         #log.info("state: %s" % self.get_kociemba_string(True))
         log.info("")
         log.info("")
@@ -2385,17 +2493,39 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
 
 
         # Test prune tables
+        #self.lt_LFRB_solve_inner_centers.solve()
         #self.lt_LR_solve_inner_x_center_t_center_middle_oblique_edge.solve()
         #self.lt_LR_solve_oblique_edge.solve()
         #self.print_cube()
-        #log.info("%d steps in" % self.get_solution_len_minus_rotates(self.solution))
+        #log.info("%s: %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         #sys.exit(0)
 
         # Reduce LFRB centers to 5x5x5 via
+
+        # uncomment if using 6-deep partial table
         # Reduce LR centers to 5x5x5 by solving the inner x-centers, t-centers and oblique edges
         self.lt_LR_solve_inner_centers_and_oblique_edges.solve()
-        log.info("LR inner-centers solved and oblique edges paired, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
         self.print_cube()
+        log.info("%s: LR inner-centers solved and oblique edges paired, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
+        log.info("")
+        log.info("")
+        log.info("")
+        log.info("")
+
+        # Solve the LR t-centers...this speeds up the step80 IDA a good bit because the centers of
+        # sides L and R do not get as scrambled while solving FB if LR t-centers are already solved.
+        fake_555 = self.create_fake_555_for_LR_t_centers()
+        fake_555.lt_LR_t_centers_solve.solve()
+
+        for step in fake_555.solution:
+            if step.startswith('5'):
+                step = '7' + step[1:]
+            elif step.startswith('3'):
+                step = '4' + step[1:]
+            self.rotate(step)
+
+        self.print_cube()
+        log.info("%s: LR outer t-centers solved, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         log.info("")
         log.info("")
         log.info("")
@@ -2405,14 +2535,14 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
         #self.lt_FB_solve_inner_x_center_t_center_middle_oblique_edge.solve()
         #self.lt_FB_solve_oblique_edge.solve()
         #self.print_cube()
-        #log.info("%d steps in" % self.get_solution_len_minus_rotates(self.solution))
+        #log.info("%s: %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         #sys.exit(0)
 
         '''
         # Reduce FB centers to 5x5x5 by solving the inner x-centers, t-centers and oblique edges
         self.lt_FB_solve_inner_centers_and_oblique_edges.solve()
-        log.info("FB inner-centers solved and oblique edges paired, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
         self.print_cube()
+        log.info("%s: FB inner-centers solved and oblique edges paired, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         log.info("")
         log.info("")
         log.info("")
@@ -2421,8 +2551,8 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
 
         # Reduce LRFB centers to 5x5x5 by solving the inner x-centers, t-centers and oblique edges
         self.lt_LFRB_solve_inner_centers_and_oblique_edges.solve()
-        log.info("LFRB centers reduced to 5x5x5 centers, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
         self.print_cube()
+        log.info("%s: LFRB centers reduced to 5x5x5 centers, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         log.info("")
         log.info("")
         log.info("")
@@ -2435,11 +2565,12 @@ class RubiksCube777(RubiksCubeNNNOddEdges):
             # solve their centers. We must "solve" the t-centers in this scenario.
             self.solve_reduced_555_t_centers()
             self.print_cube()
-            log.info("Took %d steps to solve oblique edges and t-centers" % self.get_solution_len_minus_rotates(self.solution))
+            log.info("%s: Took %d steps to solve oblique edges and t-centers" % (self, self.get_solution_len_minus_rotates(self.solution)))
         else:
             self.solve_reduced_555_centers()
             self.print_cube()
-            log.info("Took %d steps to solve centers" % self.get_solution_len_minus_rotates(self.solution))
+            log.info("%s: Took %d steps to solve centers" % (self, self.get_solution_len_minus_rotates(self.solution)))
+
 
 
 # There are 4900 of them so I put them at the bottom of the file
@@ -7345,3 +7476,249 @@ lt_LFRB_solve_inner_centers_and_oblique_edges_state_targets = (
     'fffffffffe000001c0000',
     'ffffffffffc0000000000',
 )
+
+def rotate_777_U(cube):
+    return [cube[0],cube[43],cube[36],cube[29],cube[22],cube[15],cube[8],cube[1],cube[44],cube[37],cube[30],cube[23],cube[16],cube[9],cube[2],cube[45],cube[38],cube[31],cube[24],cube[17],cube[10],cube[3],cube[46],cube[39],cube[32],cube[25],cube[18],cube[11],cube[4],cube[47],cube[40],cube[33],cube[26],cube[19],cube[12],cube[5],cube[48],cube[41],cube[34],cube[27],cube[20],cube[13],cube[6],cube[49],cube[42],cube[35],cube[28],cube[21],cube[14],cube[7]] + cube[99:106] + cube[57:99] + cube[148:155] + cube[106:148] + cube[197:204] + cube[155:197] + cube[50:57] + cube[204:295]
+
+def rotate_777_U_prime(cube):
+    return [cube[0],cube[7],cube[14],cube[21],cube[28],cube[35],cube[42],cube[49],cube[6],cube[13],cube[20],cube[27],cube[34],cube[41],cube[48],cube[5],cube[12],cube[19],cube[26],cube[33],cube[40],cube[47],cube[4],cube[11],cube[18],cube[25],cube[32],cube[39],cube[46],cube[3],cube[10],cube[17],cube[24],cube[31],cube[38],cube[45],cube[2],cube[9],cube[16],cube[23],cube[30],cube[37],cube[44],cube[1],cube[8],cube[15],cube[22],cube[29],cube[36],cube[43]] + cube[197:204] + cube[57:99] + cube[50:57] + cube[106:148] + cube[99:106] + cube[155:197] + cube[148:155] + cube[204:295]
+
+def rotate_777_U2(cube):
+    return [cube[0],cube[49],cube[48],cube[47],cube[46],cube[45],cube[44],cube[43],cube[42],cube[41],cube[40],cube[39],cube[38],cube[37],cube[36],cube[35],cube[34],cube[33],cube[32],cube[31],cube[30],cube[29],cube[28],cube[27],cube[26],cube[25],cube[24],cube[23],cube[22],cube[21],cube[20],cube[19],cube[18],cube[17],cube[16],cube[15],cube[14],cube[13],cube[12],cube[11],cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1]] + cube[148:155] + cube[57:99] + cube[197:204] + cube[106:148] + cube[50:57] + cube[155:197] + cube[99:106] + cube[204:295]
+
+def rotate_777_Uw(cube):
+    return [cube[0],cube[43],cube[36],cube[29],cube[22],cube[15],cube[8],cube[1],cube[44],cube[37],cube[30],cube[23],cube[16],cube[9],cube[2],cube[45],cube[38],cube[31],cube[24],cube[17],cube[10],cube[3],cube[46],cube[39],cube[32],cube[25],cube[18],cube[11],cube[4],cube[47],cube[40],cube[33],cube[26],cube[19],cube[12],cube[5],cube[48],cube[41],cube[34],cube[27],cube[20],cube[13],cube[6],cube[49],cube[42],cube[35],cube[28],cube[21],cube[14],cube[7]] + cube[99:113] + cube[64:99] + cube[148:162] + cube[113:148] + cube[197:211] + cube[162:197] + cube[50:64] + cube[211:295]
+
+def rotate_777_Uw_prime(cube):
+    return [cube[0],cube[7],cube[14],cube[21],cube[28],cube[35],cube[42],cube[49],cube[6],cube[13],cube[20],cube[27],cube[34],cube[41],cube[48],cube[5],cube[12],cube[19],cube[26],cube[33],cube[40],cube[47],cube[4],cube[11],cube[18],cube[25],cube[32],cube[39],cube[46],cube[3],cube[10],cube[17],cube[24],cube[31],cube[38],cube[45],cube[2],cube[9],cube[16],cube[23],cube[30],cube[37],cube[44],cube[1],cube[8],cube[15],cube[22],cube[29],cube[36],cube[43]] + cube[197:211] + cube[64:99] + cube[50:64] + cube[113:148] + cube[99:113] + cube[162:197] + cube[148:162] + cube[211:295]
+
+def rotate_777_Uw2(cube):
+    return [cube[0],cube[49],cube[48],cube[47],cube[46],cube[45],cube[44],cube[43],cube[42],cube[41],cube[40],cube[39],cube[38],cube[37],cube[36],cube[35],cube[34],cube[33],cube[32],cube[31],cube[30],cube[29],cube[28],cube[27],cube[26],cube[25],cube[24],cube[23],cube[22],cube[21],cube[20],cube[19],cube[18],cube[17],cube[16],cube[15],cube[14],cube[13],cube[12],cube[11],cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1]] + cube[148:162] + cube[64:99] + cube[197:211] + cube[113:148] + cube[50:64] + cube[162:197] + cube[99:113] + cube[211:295]
+
+def rotate_777_3Uw(cube):
+    return [cube[0],cube[43],cube[36],cube[29],cube[22],cube[15],cube[8],cube[1],cube[44],cube[37],cube[30],cube[23],cube[16],cube[9],cube[2],cube[45],cube[38],cube[31],cube[24],cube[17],cube[10],cube[3],cube[46],cube[39],cube[32],cube[25],cube[18],cube[11],cube[4],cube[47],cube[40],cube[33],cube[26],cube[19],cube[12],cube[5],cube[48],cube[41],cube[34],cube[27],cube[20],cube[13],cube[6],cube[49],cube[42],cube[35],cube[28],cube[21],cube[14],cube[7]] + cube[99:120] + cube[71:99] + cube[148:169] + cube[120:148] + cube[197:218] + cube[169:197] + cube[50:71] + cube[218:295]
+
+def rotate_777_3Uw_prime(cube):
+    return [cube[0],cube[7],cube[14],cube[21],cube[28],cube[35],cube[42],cube[49],cube[6],cube[13],cube[20],cube[27],cube[34],cube[41],cube[48],cube[5],cube[12],cube[19],cube[26],cube[33],cube[40],cube[47],cube[4],cube[11],cube[18],cube[25],cube[32],cube[39],cube[46],cube[3],cube[10],cube[17],cube[24],cube[31],cube[38],cube[45],cube[2],cube[9],cube[16],cube[23],cube[30],cube[37],cube[44],cube[1],cube[8],cube[15],cube[22],cube[29],cube[36],cube[43]] + cube[197:218] + cube[71:99] + cube[50:71] + cube[120:148] + cube[99:120] + cube[169:197] + cube[148:169] + cube[218:295]
+
+def rotate_777_3Uw2(cube):
+    return [cube[0],cube[49],cube[48],cube[47],cube[46],cube[45],cube[44],cube[43],cube[42],cube[41],cube[40],cube[39],cube[38],cube[37],cube[36],cube[35],cube[34],cube[33],cube[32],cube[31],cube[30],cube[29],cube[28],cube[27],cube[26],cube[25],cube[24],cube[23],cube[22],cube[21],cube[20],cube[19],cube[18],cube[17],cube[16],cube[15],cube[14],cube[13],cube[12],cube[11],cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1]] + cube[148:169] + cube[71:99] + cube[197:218] + cube[120:148] + cube[50:71] + cube[169:197] + cube[99:120] + cube[218:295]
+
+def rotate_777_L(cube):
+    return [cube[0],cube[245]] + cube[2:8] + [cube[238]] + cube[9:15] + [cube[231]] + cube[16:22] + [cube[224]] + cube[23:29] + [cube[217]] + cube[30:36] + [cube[210]] + cube[37:43] + [cube[203]] + cube[44:50] + [cube[92],cube[85],cube[78],cube[71],cube[64],cube[57],cube[50],cube[93],cube[86],cube[79],cube[72],cube[65],cube[58],cube[51],cube[94],cube[87],cube[80],cube[73],cube[66],cube[59],cube[52],cube[95],cube[88],cube[81],cube[74],cube[67],cube[60],cube[53],cube[96],cube[89],cube[82],cube[75],cube[68],cube[61],cube[54],cube[97],cube[90],cube[83],cube[76],cube[69],cube[62],cube[55],cube[98],cube[91],cube[84],cube[77],cube[70],cube[63],cube[56],cube[1]] + cube[100:106] + [cube[8]] + cube[107:113] + [cube[15]] + cube[114:120] + [cube[22]] + cube[121:127] + [cube[29]] + cube[128:134] + [cube[36]] + cube[135:141] + [cube[43]] + cube[142:203] + [cube[288]] + cube[204:210] + [cube[281]] + cube[211:217] + [cube[274]] + cube[218:224] + [cube[267]] + cube[225:231] + [cube[260]] + cube[232:238] + [cube[253]] + cube[239:245] + [cube[246],cube[99]] + cube[247:253] + [cube[106]] + cube[254:260] + [cube[113]] + cube[261:267] + [cube[120]] + cube[268:274] + [cube[127]] + cube[275:281] + [cube[134]] + cube[282:288] + [cube[141]] + cube[289:295]
+
+def rotate_777_L_prime(cube):
+    return [cube[0],cube[99]] + cube[2:8] + [cube[106]] + cube[9:15] + [cube[113]] + cube[16:22] + [cube[120]] + cube[23:29] + [cube[127]] + cube[30:36] + [cube[134]] + cube[37:43] + [cube[141]] + cube[44:50] + [cube[56],cube[63],cube[70],cube[77],cube[84],cube[91],cube[98],cube[55],cube[62],cube[69],cube[76],cube[83],cube[90],cube[97],cube[54],cube[61],cube[68],cube[75],cube[82],cube[89],cube[96],cube[53],cube[60],cube[67],cube[74],cube[81],cube[88],cube[95],cube[52],cube[59],cube[66],cube[73],cube[80],cube[87],cube[94],cube[51],cube[58],cube[65],cube[72],cube[79],cube[86],cube[93],cube[50],cube[57],cube[64],cube[71],cube[78],cube[85],cube[92],cube[246]] + cube[100:106] + [cube[253]] + cube[107:113] + [cube[260]] + cube[114:120] + [cube[267]] + cube[121:127] + [cube[274]] + cube[128:134] + [cube[281]] + cube[135:141] + [cube[288]] + cube[142:203] + [cube[43]] + cube[204:210] + [cube[36]] + cube[211:217] + [cube[29]] + cube[218:224] + [cube[22]] + cube[225:231] + [cube[15]] + cube[232:238] + [cube[8]] + cube[239:245] + [cube[1],cube[245]] + cube[247:253] + [cube[238]] + cube[254:260] + [cube[231]] + cube[261:267] + [cube[224]] + cube[268:274] + [cube[217]] + cube[275:281] + [cube[210]] + cube[282:288] + [cube[203]] + cube[289:295]
+
+def rotate_777_L2(cube):
+    return [cube[0],cube[246]] + cube[2:8] + [cube[253]] + cube[9:15] + [cube[260]] + cube[16:22] + [cube[267]] + cube[23:29] + [cube[274]] + cube[30:36] + [cube[281]] + cube[37:43] + [cube[288]] + cube[44:50] + [cube[98],cube[97],cube[96],cube[95],cube[94],cube[93],cube[92],cube[91],cube[90],cube[89],cube[88],cube[87],cube[86],cube[85],cube[84],cube[83],cube[82],cube[81],cube[80],cube[79],cube[78],cube[77],cube[76],cube[75],cube[74],cube[73],cube[72],cube[71],cube[70],cube[69],cube[68],cube[67],cube[66],cube[65],cube[64],cube[63],cube[62],cube[61],cube[60],cube[59],cube[58],cube[57],cube[56],cube[55],cube[54],cube[53],cube[52],cube[51],cube[50],cube[245]] + cube[100:106] + [cube[238]] + cube[107:113] + [cube[231]] + cube[114:120] + [cube[224]] + cube[121:127] + [cube[217]] + cube[128:134] + [cube[210]] + cube[135:141] + [cube[203]] + cube[142:203] + [cube[141]] + cube[204:210] + [cube[134]] + cube[211:217] + [cube[127]] + cube[218:224] + [cube[120]] + cube[225:231] + [cube[113]] + cube[232:238] + [cube[106]] + cube[239:245] + [cube[99],cube[1]] + cube[247:253] + [cube[8]] + cube[254:260] + [cube[15]] + cube[261:267] + [cube[22]] + cube[268:274] + [cube[29]] + cube[275:281] + [cube[36]] + cube[282:288] + [cube[43]] + cube[289:295]
+
+def rotate_777_Lw(cube):
+    return [cube[0],cube[245],cube[244]] + cube[3:8] + [cube[238],cube[237]] + cube[10:15] + [cube[231],cube[230]] + cube[17:22] + [cube[224],cube[223]] + cube[24:29] + [cube[217],cube[216]] + cube[31:36] + [cube[210],cube[209]] + cube[38:43] + [cube[203],cube[202]] + cube[45:50] + [cube[92],cube[85],cube[78],cube[71],cube[64],cube[57],cube[50],cube[93],cube[86],cube[79],cube[72],cube[65],cube[58],cube[51],cube[94],cube[87],cube[80],cube[73],cube[66],cube[59],cube[52],cube[95],cube[88],cube[81],cube[74],cube[67],cube[60],cube[53],cube[96],cube[89],cube[82],cube[75],cube[68],cube[61],cube[54],cube[97],cube[90],cube[83],cube[76],cube[69],cube[62],cube[55],cube[98],cube[91],cube[84],cube[77],cube[70],cube[63],cube[56]] + cube[1:3] + cube[101:106] + cube[8:10] + cube[108:113] + cube[15:17] + cube[115:120] + cube[22:24] + cube[122:127] + cube[29:31] + cube[129:134] + cube[36:38] + cube[136:141] + cube[43:45] + cube[143:202] + [cube[289],cube[288]] + cube[204:209] + [cube[282],cube[281]] + cube[211:216] + [cube[275],cube[274]] + cube[218:223] + [cube[268],cube[267]] + cube[225:230] + [cube[261],cube[260]] + cube[232:237] + [cube[254],cube[253]] + cube[239:244] + [cube[247],cube[246]] + cube[99:101] + cube[248:253] + cube[106:108] + cube[255:260] + cube[113:115] + cube[262:267] + cube[120:122] + cube[269:274] + cube[127:129] + cube[276:281] + cube[134:136] + cube[283:288] + cube[141:143] + cube[290:295]
+
+def rotate_777_Lw_prime(cube):
+    return [cube[0]] + cube[99:101] + cube[3:8] + cube[106:108] + cube[10:15] + cube[113:115] + cube[17:22] + cube[120:122] + cube[24:29] + cube[127:129] + cube[31:36] + cube[134:136] + cube[38:43] + cube[141:143] + cube[45:50] + [cube[56],cube[63],cube[70],cube[77],cube[84],cube[91],cube[98],cube[55],cube[62],cube[69],cube[76],cube[83],cube[90],cube[97],cube[54],cube[61],cube[68],cube[75],cube[82],cube[89],cube[96],cube[53],cube[60],cube[67],cube[74],cube[81],cube[88],cube[95],cube[52],cube[59],cube[66],cube[73],cube[80],cube[87],cube[94],cube[51],cube[58],cube[65],cube[72],cube[79],cube[86],cube[93],cube[50],cube[57],cube[64],cube[71],cube[78],cube[85],cube[92]] + cube[246:248] + cube[101:106] + cube[253:255] + cube[108:113] + cube[260:262] + cube[115:120] + cube[267:269] + cube[122:127] + cube[274:276] + cube[129:134] + cube[281:283] + cube[136:141] + cube[288:290] + cube[143:202] + [cube[44],cube[43]] + cube[204:209] + [cube[37],cube[36]] + cube[211:216] + [cube[30],cube[29]] + cube[218:223] + [cube[23],cube[22]] + cube[225:230] + [cube[16],cube[15]] + cube[232:237] + [cube[9],cube[8]] + cube[239:244] + [cube[2],cube[1],cube[245],cube[244]] + cube[248:253] + [cube[238],cube[237]] + cube[255:260] + [cube[231],cube[230]] + cube[262:267] + [cube[224],cube[223]] + cube[269:274] + [cube[217],cube[216]] + cube[276:281] + [cube[210],cube[209]] + cube[283:288] + [cube[203],cube[202]] + cube[290:295]
+
+def rotate_777_Lw2(cube):
+    return [cube[0]] + cube[246:248] + cube[3:8] + cube[253:255] + cube[10:15] + cube[260:262] + cube[17:22] + cube[267:269] + cube[24:29] + cube[274:276] + cube[31:36] + cube[281:283] + cube[38:43] + cube[288:290] + cube[45:50] + [cube[98],cube[97],cube[96],cube[95],cube[94],cube[93],cube[92],cube[91],cube[90],cube[89],cube[88],cube[87],cube[86],cube[85],cube[84],cube[83],cube[82],cube[81],cube[80],cube[79],cube[78],cube[77],cube[76],cube[75],cube[74],cube[73],cube[72],cube[71],cube[70],cube[69],cube[68],cube[67],cube[66],cube[65],cube[64],cube[63],cube[62],cube[61],cube[60],cube[59],cube[58],cube[57],cube[56],cube[55],cube[54],cube[53],cube[52],cube[51],cube[50],cube[245],cube[244]] + cube[101:106] + [cube[238],cube[237]] + cube[108:113] + [cube[231],cube[230]] + cube[115:120] + [cube[224],cube[223]] + cube[122:127] + [cube[217],cube[216]] + cube[129:134] + [cube[210],cube[209]] + cube[136:141] + [cube[203],cube[202]] + cube[143:202] + [cube[142],cube[141]] + cube[204:209] + [cube[135],cube[134]] + cube[211:216] + [cube[128],cube[127]] + cube[218:223] + [cube[121],cube[120]] + cube[225:230] + [cube[114],cube[113]] + cube[232:237] + [cube[107],cube[106]] + cube[239:244] + [cube[100],cube[99]] + cube[1:3] + cube[248:253] + cube[8:10] + cube[255:260] + cube[15:17] + cube[262:267] + cube[22:24] + cube[269:274] + cube[29:31] + cube[276:281] + cube[36:38] + cube[283:288] + cube[43:45] + cube[290:295]
+
+def rotate_777_3Lw(cube):
+    return [cube[0],cube[245],cube[244],cube[243]] + cube[4:8] + [cube[238],cube[237],cube[236]] + cube[11:15] + [cube[231],cube[230],cube[229]] + cube[18:22] + [cube[224],cube[223],cube[222]] + cube[25:29] + [cube[217],cube[216],cube[215]] + cube[32:36] + [cube[210],cube[209],cube[208]] + cube[39:43] + [cube[203],cube[202],cube[201]] + cube[46:50] + [cube[92],cube[85],cube[78],cube[71],cube[64],cube[57],cube[50],cube[93],cube[86],cube[79],cube[72],cube[65],cube[58],cube[51],cube[94],cube[87],cube[80],cube[73],cube[66],cube[59],cube[52],cube[95],cube[88],cube[81],cube[74],cube[67],cube[60],cube[53],cube[96],cube[89],cube[82],cube[75],cube[68],cube[61],cube[54],cube[97],cube[90],cube[83],cube[76],cube[69],cube[62],cube[55],cube[98],cube[91],cube[84],cube[77],cube[70],cube[63],cube[56]] + cube[1:4] + cube[102:106] + cube[8:11] + cube[109:113] + cube[15:18] + cube[116:120] + cube[22:25] + cube[123:127] + cube[29:32] + cube[130:134] + cube[36:39] + cube[137:141] + cube[43:46] + cube[144:201] + [cube[290],cube[289],cube[288]] + cube[204:208] + [cube[283],cube[282],cube[281]] + cube[211:215] + [cube[276],cube[275],cube[274]] + cube[218:222] + [cube[269],cube[268],cube[267]] + cube[225:229] + [cube[262],cube[261],cube[260]] + cube[232:236] + [cube[255],cube[254],cube[253]] + cube[239:243] + [cube[248],cube[247],cube[246]] + cube[99:102] + cube[249:253] + cube[106:109] + cube[256:260] + cube[113:116] + cube[263:267] + cube[120:123] + cube[270:274] + cube[127:130] + cube[277:281] + cube[134:137] + cube[284:288] + cube[141:144] + cube[291:295]
+
+def rotate_777_3Lw_prime(cube):
+    return [cube[0]] + cube[99:102] + cube[4:8] + cube[106:109] + cube[11:15] + cube[113:116] + cube[18:22] + cube[120:123] + cube[25:29] + cube[127:130] + cube[32:36] + cube[134:137] + cube[39:43] + cube[141:144] + cube[46:50] + [cube[56],cube[63],cube[70],cube[77],cube[84],cube[91],cube[98],cube[55],cube[62],cube[69],cube[76],cube[83],cube[90],cube[97],cube[54],cube[61],cube[68],cube[75],cube[82],cube[89],cube[96],cube[53],cube[60],cube[67],cube[74],cube[81],cube[88],cube[95],cube[52],cube[59],cube[66],cube[73],cube[80],cube[87],cube[94],cube[51],cube[58],cube[65],cube[72],cube[79],cube[86],cube[93],cube[50],cube[57],cube[64],cube[71],cube[78],cube[85],cube[92]] + cube[246:249] + cube[102:106] + cube[253:256] + cube[109:113] + cube[260:263] + cube[116:120] + cube[267:270] + cube[123:127] + cube[274:277] + cube[130:134] + cube[281:284] + cube[137:141] + cube[288:291] + cube[144:201] + [cube[45],cube[44],cube[43]] + cube[204:208] + [cube[38],cube[37],cube[36]] + cube[211:215] + [cube[31],cube[30],cube[29]] + cube[218:222] + [cube[24],cube[23],cube[22]] + cube[225:229] + [cube[17],cube[16],cube[15]] + cube[232:236] + [cube[10],cube[9],cube[8]] + cube[239:243] + [cube[3],cube[2],cube[1],cube[245],cube[244],cube[243]] + cube[249:253] + [cube[238],cube[237],cube[236]] + cube[256:260] + [cube[231],cube[230],cube[229]] + cube[263:267] + [cube[224],cube[223],cube[222]] + cube[270:274] + [cube[217],cube[216],cube[215]] + cube[277:281] + [cube[210],cube[209],cube[208]] + cube[284:288] + [cube[203],cube[202],cube[201]] + cube[291:295]
+
+def rotate_777_3Lw2(cube):
+    return [cube[0]] + cube[246:249] + cube[4:8] + cube[253:256] + cube[11:15] + cube[260:263] + cube[18:22] + cube[267:270] + cube[25:29] + cube[274:277] + cube[32:36] + cube[281:284] + cube[39:43] + cube[288:291] + cube[46:50] + [cube[98],cube[97],cube[96],cube[95],cube[94],cube[93],cube[92],cube[91],cube[90],cube[89],cube[88],cube[87],cube[86],cube[85],cube[84],cube[83],cube[82],cube[81],cube[80],cube[79],cube[78],cube[77],cube[76],cube[75],cube[74],cube[73],cube[72],cube[71],cube[70],cube[69],cube[68],cube[67],cube[66],cube[65],cube[64],cube[63],cube[62],cube[61],cube[60],cube[59],cube[58],cube[57],cube[56],cube[55],cube[54],cube[53],cube[52],cube[51],cube[50],cube[245],cube[244],cube[243]] + cube[102:106] + [cube[238],cube[237],cube[236]] + cube[109:113] + [cube[231],cube[230],cube[229]] + cube[116:120] + [cube[224],cube[223],cube[222]] + cube[123:127] + [cube[217],cube[216],cube[215]] + cube[130:134] + [cube[210],cube[209],cube[208]] + cube[137:141] + [cube[203],cube[202],cube[201]] + cube[144:201] + [cube[143],cube[142],cube[141]] + cube[204:208] + [cube[136],cube[135],cube[134]] + cube[211:215] + [cube[129],cube[128],cube[127]] + cube[218:222] + [cube[122],cube[121],cube[120]] + cube[225:229] + [cube[115],cube[114],cube[113]] + cube[232:236] + [cube[108],cube[107],cube[106]] + cube[239:243] + [cube[101],cube[100],cube[99]] + cube[1:4] + cube[249:253] + cube[8:11] + cube[256:260] + cube[15:18] + cube[263:267] + cube[22:25] + cube[270:274] + cube[29:32] + cube[277:281] + cube[36:39] + cube[284:288] + cube[43:46] + cube[291:295]
+
+def rotate_777_F(cube):
+    return cube[0:43] + [cube[98],cube[91],cube[84],cube[77],cube[70],cube[63],cube[56]] + cube[50:56] + [cube[246]] + cube[57:63] + [cube[247]] + cube[64:70] + [cube[248]] + cube[71:77] + [cube[249]] + cube[78:84] + [cube[250]] + cube[85:91] + [cube[251]] + cube[92:98] + [cube[252],cube[141],cube[134],cube[127],cube[120],cube[113],cube[106],cube[99],cube[142],cube[135],cube[128],cube[121],cube[114],cube[107],cube[100],cube[143],cube[136],cube[129],cube[122],cube[115],cube[108],cube[101],cube[144],cube[137],cube[130],cube[123],cube[116],cube[109],cube[102],cube[145],cube[138],cube[131],cube[124],cube[117],cube[110],cube[103],cube[146],cube[139],cube[132],cube[125],cube[118],cube[111],cube[104],cube[147],cube[140],cube[133],cube[126],cube[119],cube[112],cube[105],cube[43]] + cube[149:155] + [cube[44]] + cube[156:162] + [cube[45]] + cube[163:169] + [cube[46]] + cube[170:176] + [cube[47]] + cube[177:183] + [cube[48]] + cube[184:190] + [cube[49]] + cube[191:246] + [cube[190],cube[183],cube[176],cube[169],cube[162],cube[155],cube[148]] + cube[253:295]
+
+def rotate_777_F_prime(cube):
+    return cube[0:43] + [cube[148],cube[155],cube[162],cube[169],cube[176],cube[183],cube[190]] + cube[50:56] + [cube[49]] + cube[57:63] + [cube[48]] + cube[64:70] + [cube[47]] + cube[71:77] + [cube[46]] + cube[78:84] + [cube[45]] + cube[85:91] + [cube[44]] + cube[92:98] + [cube[43],cube[105],cube[112],cube[119],cube[126],cube[133],cube[140],cube[147],cube[104],cube[111],cube[118],cube[125],cube[132],cube[139],cube[146],cube[103],cube[110],cube[117],cube[124],cube[131],cube[138],cube[145],cube[102],cube[109],cube[116],cube[123],cube[130],cube[137],cube[144],cube[101],cube[108],cube[115],cube[122],cube[129],cube[136],cube[143],cube[100],cube[107],cube[114],cube[121],cube[128],cube[135],cube[142],cube[99],cube[106],cube[113],cube[120],cube[127],cube[134],cube[141],cube[252]] + cube[149:155] + [cube[251]] + cube[156:162] + [cube[250]] + cube[163:169] + [cube[249]] + cube[170:176] + [cube[248]] + cube[177:183] + [cube[247]] + cube[184:190] + [cube[246]] + cube[191:246] + [cube[56],cube[63],cube[70],cube[77],cube[84],cube[91],cube[98]] + cube[253:295]
+
+def rotate_777_F2(cube):
+    return cube[0:43] + [cube[252],cube[251],cube[250],cube[249],cube[248],cube[247],cube[246]] + cube[50:56] + [cube[190]] + cube[57:63] + [cube[183]] + cube[64:70] + [cube[176]] + cube[71:77] + [cube[169]] + cube[78:84] + [cube[162]] + cube[85:91] + [cube[155]] + cube[92:98] + [cube[148],cube[147],cube[146],cube[145],cube[144],cube[143],cube[142],cube[141],cube[140],cube[139],cube[138],cube[137],cube[136],cube[135],cube[134],cube[133],cube[132],cube[131],cube[130],cube[129],cube[128],cube[127],cube[126],cube[125],cube[124],cube[123],cube[122],cube[121],cube[120],cube[119],cube[118],cube[117],cube[116],cube[115],cube[114],cube[113],cube[112],cube[111],cube[110],cube[109],cube[108],cube[107],cube[106],cube[105],cube[104],cube[103],cube[102],cube[101],cube[100],cube[99],cube[98]] + cube[149:155] + [cube[91]] + cube[156:162] + [cube[84]] + cube[163:169] + [cube[77]] + cube[170:176] + [cube[70]] + cube[177:183] + [cube[63]] + cube[184:190] + [cube[56]] + cube[191:246] + [cube[49],cube[48],cube[47],cube[46],cube[45],cube[44],cube[43]] + cube[253:295]
+
+def rotate_777_Fw(cube):
+    return cube[0:36] + [cube[97],cube[90],cube[83],cube[76],cube[69],cube[62],cube[55],cube[98],cube[91],cube[84],cube[77],cube[70],cube[63],cube[56]] + cube[50:55] + [cube[253],cube[246]] + cube[57:62] + [cube[254],cube[247]] + cube[64:69] + [cube[255],cube[248]] + cube[71:76] + [cube[256],cube[249]] + cube[78:83] + [cube[257],cube[250]] + cube[85:90] + [cube[258],cube[251]] + cube[92:97] + [cube[259],cube[252],cube[141],cube[134],cube[127],cube[120],cube[113],cube[106],cube[99],cube[142],cube[135],cube[128],cube[121],cube[114],cube[107],cube[100],cube[143],cube[136],cube[129],cube[122],cube[115],cube[108],cube[101],cube[144],cube[137],cube[130],cube[123],cube[116],cube[109],cube[102],cube[145],cube[138],cube[131],cube[124],cube[117],cube[110],cube[103],cube[146],cube[139],cube[132],cube[125],cube[118],cube[111],cube[104],cube[147],cube[140],cube[133],cube[126],cube[119],cube[112],cube[105],cube[43],cube[36]] + cube[150:155] + [cube[44],cube[37]] + cube[157:162] + [cube[45],cube[38]] + cube[164:169] + [cube[46],cube[39]] + cube[171:176] + [cube[47],cube[40]] + cube[178:183] + [cube[48],cube[41]] + cube[185:190] + [cube[49],cube[42]] + cube[192:246] + [cube[190],cube[183],cube[176],cube[169],cube[162],cube[155],cube[148],cube[191],cube[184],cube[177],cube[170],cube[163],cube[156],cube[149]] + cube[260:295]
+
+def rotate_777_Fw_prime(cube):
+    return cube[0:36] + [cube[149],cube[156],cube[163],cube[170],cube[177],cube[184],cube[191],cube[148],cube[155],cube[162],cube[169],cube[176],cube[183],cube[190]] + cube[50:55] + [cube[42],cube[49]] + cube[57:62] + [cube[41],cube[48]] + cube[64:69] + [cube[40],cube[47]] + cube[71:76] + [cube[39],cube[46]] + cube[78:83] + [cube[38],cube[45]] + cube[85:90] + [cube[37],cube[44]] + cube[92:97] + [cube[36],cube[43],cube[105],cube[112],cube[119],cube[126],cube[133],cube[140],cube[147],cube[104],cube[111],cube[118],cube[125],cube[132],cube[139],cube[146],cube[103],cube[110],cube[117],cube[124],cube[131],cube[138],cube[145],cube[102],cube[109],cube[116],cube[123],cube[130],cube[137],cube[144],cube[101],cube[108],cube[115],cube[122],cube[129],cube[136],cube[143],cube[100],cube[107],cube[114],cube[121],cube[128],cube[135],cube[142],cube[99],cube[106],cube[113],cube[120],cube[127],cube[134],cube[141],cube[252],cube[259]] + cube[150:155] + [cube[251],cube[258]] + cube[157:162] + [cube[250],cube[257]] + cube[164:169] + [cube[249],cube[256]] + cube[171:176] + [cube[248],cube[255]] + cube[178:183] + [cube[247],cube[254]] + cube[185:190] + [cube[246],cube[253]] + cube[192:246] + [cube[56],cube[63],cube[70],cube[77],cube[84],cube[91],cube[98],cube[55],cube[62],cube[69],cube[76],cube[83],cube[90],cube[97]] + cube[260:295]
+
+def rotate_777_Fw2(cube):
+    return cube[0:36] + [cube[259],cube[258],cube[257],cube[256],cube[255],cube[254],cube[253],cube[252],cube[251],cube[250],cube[249],cube[248],cube[247],cube[246]] + cube[50:55] + [cube[191],cube[190]] + cube[57:62] + [cube[184],cube[183]] + cube[64:69] + [cube[177],cube[176]] + cube[71:76] + [cube[170],cube[169]] + cube[78:83] + [cube[163],cube[162]] + cube[85:90] + [cube[156],cube[155]] + cube[92:97] + [cube[149],cube[148],cube[147],cube[146],cube[145],cube[144],cube[143],cube[142],cube[141],cube[140],cube[139],cube[138],cube[137],cube[136],cube[135],cube[134],cube[133],cube[132],cube[131],cube[130],cube[129],cube[128],cube[127],cube[126],cube[125],cube[124],cube[123],cube[122],cube[121],cube[120],cube[119],cube[118],cube[117],cube[116],cube[115],cube[114],cube[113],cube[112],cube[111],cube[110],cube[109],cube[108],cube[107],cube[106],cube[105],cube[104],cube[103],cube[102],cube[101],cube[100],cube[99],cube[98],cube[97]] + cube[150:155] + [cube[91],cube[90]] + cube[157:162] + [cube[84],cube[83]] + cube[164:169] + [cube[77],cube[76]] + cube[171:176] + [cube[70],cube[69]] + cube[178:183] + [cube[63],cube[62]] + cube[185:190] + [cube[56],cube[55]] + cube[192:246] + [cube[49],cube[48],cube[47],cube[46],cube[45],cube[44],cube[43],cube[42],cube[41],cube[40],cube[39],cube[38],cube[37],cube[36]] + cube[260:295]
+
+def rotate_777_3Fw(cube):
+    return cube[0:29] + [cube[96],cube[89],cube[82],cube[75],cube[68],cube[61],cube[54],cube[97],cube[90],cube[83],cube[76],cube[69],cube[62],cube[55],cube[98],cube[91],cube[84],cube[77],cube[70],cube[63],cube[56]] + cube[50:54] + [cube[260],cube[253],cube[246]] + cube[57:61] + [cube[261],cube[254],cube[247]] + cube[64:68] + [cube[262],cube[255],cube[248]] + cube[71:75] + [cube[263],cube[256],cube[249]] + cube[78:82] + [cube[264],cube[257],cube[250]] + cube[85:89] + [cube[265],cube[258],cube[251]] + cube[92:96] + [cube[266],cube[259],cube[252],cube[141],cube[134],cube[127],cube[120],cube[113],cube[106],cube[99],cube[142],cube[135],cube[128],cube[121],cube[114],cube[107],cube[100],cube[143],cube[136],cube[129],cube[122],cube[115],cube[108],cube[101],cube[144],cube[137],cube[130],cube[123],cube[116],cube[109],cube[102],cube[145],cube[138],cube[131],cube[124],cube[117],cube[110],cube[103],cube[146],cube[139],cube[132],cube[125],cube[118],cube[111],cube[104],cube[147],cube[140],cube[133],cube[126],cube[119],cube[112],cube[105],cube[43],cube[36],cube[29]] + cube[151:155] + [cube[44],cube[37],cube[30]] + cube[158:162] + [cube[45],cube[38],cube[31]] + cube[165:169] + [cube[46],cube[39],cube[32]] + cube[172:176] + [cube[47],cube[40],cube[33]] + cube[179:183] + [cube[48],cube[41],cube[34]] + cube[186:190] + [cube[49],cube[42],cube[35]] + cube[193:246] + [cube[190],cube[183],cube[176],cube[169],cube[162],cube[155],cube[148],cube[191],cube[184],cube[177],cube[170],cube[163],cube[156],cube[149],cube[192],cube[185],cube[178],cube[171],cube[164],cube[157],cube[150]] + cube[267:295]
+
+def rotate_777_3Fw_prime(cube):
+    return cube[0:29] + [cube[150],cube[157],cube[164],cube[171],cube[178],cube[185],cube[192],cube[149],cube[156],cube[163],cube[170],cube[177],cube[184],cube[191],cube[148],cube[155],cube[162],cube[169],cube[176],cube[183],cube[190]] + cube[50:54] + [cube[35],cube[42],cube[49]] + cube[57:61] + [cube[34],cube[41],cube[48]] + cube[64:68] + [cube[33],cube[40],cube[47]] + cube[71:75] + [cube[32],cube[39],cube[46]] + cube[78:82] + [cube[31],cube[38],cube[45]] + cube[85:89] + [cube[30],cube[37],cube[44]] + cube[92:96] + [cube[29],cube[36],cube[43],cube[105],cube[112],cube[119],cube[126],cube[133],cube[140],cube[147],cube[104],cube[111],cube[118],cube[125],cube[132],cube[139],cube[146],cube[103],cube[110],cube[117],cube[124],cube[131],cube[138],cube[145],cube[102],cube[109],cube[116],cube[123],cube[130],cube[137],cube[144],cube[101],cube[108],cube[115],cube[122],cube[129],cube[136],cube[143],cube[100],cube[107],cube[114],cube[121],cube[128],cube[135],cube[142],cube[99],cube[106],cube[113],cube[120],cube[127],cube[134],cube[141],cube[252],cube[259],cube[266]] + cube[151:155] + [cube[251],cube[258],cube[265]] + cube[158:162] + [cube[250],cube[257],cube[264]] + cube[165:169] + [cube[249],cube[256],cube[263]] + cube[172:176] + [cube[248],cube[255],cube[262]] + cube[179:183] + [cube[247],cube[254],cube[261]] + cube[186:190] + [cube[246],cube[253],cube[260]] + cube[193:246] + [cube[56],cube[63],cube[70],cube[77],cube[84],cube[91],cube[98],cube[55],cube[62],cube[69],cube[76],cube[83],cube[90],cube[97],cube[54],cube[61],cube[68],cube[75],cube[82],cube[89],cube[96]] + cube[267:295]
+
+def rotate_777_3Fw2(cube):
+    return cube[0:29] + [cube[266],cube[265],cube[264],cube[263],cube[262],cube[261],cube[260],cube[259],cube[258],cube[257],cube[256],cube[255],cube[254],cube[253],cube[252],cube[251],cube[250],cube[249],cube[248],cube[247],cube[246]] + cube[50:54] + [cube[192],cube[191],cube[190]] + cube[57:61] + [cube[185],cube[184],cube[183]] + cube[64:68] + [cube[178],cube[177],cube[176]] + cube[71:75] + [cube[171],cube[170],cube[169]] + cube[78:82] + [cube[164],cube[163],cube[162]] + cube[85:89] + [cube[157],cube[156],cube[155]] + cube[92:96] + [cube[150],cube[149],cube[148],cube[147],cube[146],cube[145],cube[144],cube[143],cube[142],cube[141],cube[140],cube[139],cube[138],cube[137],cube[136],cube[135],cube[134],cube[133],cube[132],cube[131],cube[130],cube[129],cube[128],cube[127],cube[126],cube[125],cube[124],cube[123],cube[122],cube[121],cube[120],cube[119],cube[118],cube[117],cube[116],cube[115],cube[114],cube[113],cube[112],cube[111],cube[110],cube[109],cube[108],cube[107],cube[106],cube[105],cube[104],cube[103],cube[102],cube[101],cube[100],cube[99],cube[98],cube[97],cube[96]] + cube[151:155] + [cube[91],cube[90],cube[89]] + cube[158:162] + [cube[84],cube[83],cube[82]] + cube[165:169] + [cube[77],cube[76],cube[75]] + cube[172:176] + [cube[70],cube[69],cube[68]] + cube[179:183] + [cube[63],cube[62],cube[61]] + cube[186:190] + [cube[56],cube[55],cube[54]] + cube[193:246] + [cube[49],cube[48],cube[47],cube[46],cube[45],cube[44],cube[43],cube[42],cube[41],cube[40],cube[39],cube[38],cube[37],cube[36],cube[35],cube[34],cube[33],cube[32],cube[31],cube[30],cube[29]] + cube[267:295]
+
+def rotate_777_R(cube):
+    return cube[0:7] + [cube[105]] + cube[8:14] + [cube[112]] + cube[15:21] + [cube[119]] + cube[22:28] + [cube[126]] + cube[29:35] + [cube[133]] + cube[36:42] + [cube[140]] + cube[43:49] + [cube[147]] + cube[50:105] + [cube[252]] + cube[106:112] + [cube[259]] + cube[113:119] + [cube[266]] + cube[120:126] + [cube[273]] + cube[127:133] + [cube[280]] + cube[134:140] + [cube[287]] + cube[141:147] + [cube[294],cube[190],cube[183],cube[176],cube[169],cube[162],cube[155],cube[148],cube[191],cube[184],cube[177],cube[170],cube[163],cube[156],cube[149],cube[192],cube[185],cube[178],cube[171],cube[164],cube[157],cube[150],cube[193],cube[186],cube[179],cube[172],cube[165],cube[158],cube[151],cube[194],cube[187],cube[180],cube[173],cube[166],cube[159],cube[152],cube[195],cube[188],cube[181],cube[174],cube[167],cube[160],cube[153],cube[196],cube[189],cube[182],cube[175],cube[168],cube[161],cube[154],cube[49]] + cube[198:204] + [cube[42]] + cube[205:211] + [cube[35]] + cube[212:218] + [cube[28]] + cube[219:225] + [cube[21]] + cube[226:232] + [cube[14]] + cube[233:239] + [cube[7]] + cube[240:252] + [cube[239]] + cube[253:259] + [cube[232]] + cube[260:266] + [cube[225]] + cube[267:273] + [cube[218]] + cube[274:280] + [cube[211]] + cube[281:287] + [cube[204]] + cube[288:294] + [cube[197]]
+
+def rotate_777_R_prime(cube):
+    return cube[0:7] + [cube[239]] + cube[8:14] + [cube[232]] + cube[15:21] + [cube[225]] + cube[22:28] + [cube[218]] + cube[29:35] + [cube[211]] + cube[36:42] + [cube[204]] + cube[43:49] + [cube[197]] + cube[50:105] + [cube[7]] + cube[106:112] + [cube[14]] + cube[113:119] + [cube[21]] + cube[120:126] + [cube[28]] + cube[127:133] + [cube[35]] + cube[134:140] + [cube[42]] + cube[141:147] + [cube[49],cube[154],cube[161],cube[168],cube[175],cube[182],cube[189],cube[196],cube[153],cube[160],cube[167],cube[174],cube[181],cube[188],cube[195],cube[152],cube[159],cube[166],cube[173],cube[180],cube[187],cube[194],cube[151],cube[158],cube[165],cube[172],cube[179],cube[186],cube[193],cube[150],cube[157],cube[164],cube[171],cube[178],cube[185],cube[192],cube[149],cube[156],cube[163],cube[170],cube[177],cube[184],cube[191],cube[148],cube[155],cube[162],cube[169],cube[176],cube[183],cube[190],cube[294]] + cube[198:204] + [cube[287]] + cube[205:211] + [cube[280]] + cube[212:218] + [cube[273]] + cube[219:225] + [cube[266]] + cube[226:232] + [cube[259]] + cube[233:239] + [cube[252]] + cube[240:252] + [cube[105]] + cube[253:259] + [cube[112]] + cube[260:266] + [cube[119]] + cube[267:273] + [cube[126]] + cube[274:280] + [cube[133]] + cube[281:287] + [cube[140]] + cube[288:294] + [cube[147]]
+
+def rotate_777_R2(cube):
+    return cube[0:7] + [cube[252]] + cube[8:14] + [cube[259]] + cube[15:21] + [cube[266]] + cube[22:28] + [cube[273]] + cube[29:35] + [cube[280]] + cube[36:42] + [cube[287]] + cube[43:49] + [cube[294]] + cube[50:105] + [cube[239]] + cube[106:112] + [cube[232]] + cube[113:119] + [cube[225]] + cube[120:126] + [cube[218]] + cube[127:133] + [cube[211]] + cube[134:140] + [cube[204]] + cube[141:147] + [cube[197],cube[196],cube[195],cube[194],cube[193],cube[192],cube[191],cube[190],cube[189],cube[188],cube[187],cube[186],cube[185],cube[184],cube[183],cube[182],cube[181],cube[180],cube[179],cube[178],cube[177],cube[176],cube[175],cube[174],cube[173],cube[172],cube[171],cube[170],cube[169],cube[168],cube[167],cube[166],cube[165],cube[164],cube[163],cube[162],cube[161],cube[160],cube[159],cube[158],cube[157],cube[156],cube[155],cube[154],cube[153],cube[152],cube[151],cube[150],cube[149],cube[148],cube[147]] + cube[198:204] + [cube[140]] + cube[205:211] + [cube[133]] + cube[212:218] + [cube[126]] + cube[219:225] + [cube[119]] + cube[226:232] + [cube[112]] + cube[233:239] + [cube[105]] + cube[240:252] + [cube[7]] + cube[253:259] + [cube[14]] + cube[260:266] + [cube[21]] + cube[267:273] + [cube[28]] + cube[274:280] + [cube[35]] + cube[281:287] + [cube[42]] + cube[288:294] + [cube[49]]
+
+def rotate_777_Rw(cube):
+    return cube[0:6] + cube[104:106] + cube[8:13] + cube[111:113] + cube[15:20] + cube[118:120] + cube[22:27] + cube[125:127] + cube[29:34] + cube[132:134] + cube[36:41] + cube[139:141] + cube[43:48] + cube[146:148] + cube[50:104] + cube[251:253] + cube[106:111] + cube[258:260] + cube[113:118] + cube[265:267] + cube[120:125] + cube[272:274] + cube[127:132] + cube[279:281] + cube[134:139] + cube[286:288] + cube[141:146] + cube[293:295] + [cube[190],cube[183],cube[176],cube[169],cube[162],cube[155],cube[148],cube[191],cube[184],cube[177],cube[170],cube[163],cube[156],cube[149],cube[192],cube[185],cube[178],cube[171],cube[164],cube[157],cube[150],cube[193],cube[186],cube[179],cube[172],cube[165],cube[158],cube[151],cube[194],cube[187],cube[180],cube[173],cube[166],cube[159],cube[152],cube[195],cube[188],cube[181],cube[174],cube[167],cube[160],cube[153],cube[196],cube[189],cube[182],cube[175],cube[168],cube[161],cube[154],cube[49],cube[48]] + cube[199:204] + [cube[42],cube[41]] + cube[206:211] + [cube[35],cube[34]] + cube[213:218] + [cube[28],cube[27]] + cube[220:225] + [cube[21],cube[20]] + cube[227:232] + [cube[14],cube[13]] + cube[234:239] + [cube[7],cube[6]] + cube[241:251] + [cube[240],cube[239]] + cube[253:258] + [cube[233],cube[232]] + cube[260:265] + [cube[226],cube[225]] + cube[267:272] + [cube[219],cube[218]] + cube[274:279] + [cube[212],cube[211]] + cube[281:286] + [cube[205],cube[204]] + cube[288:293] + [cube[198],cube[197]]
+
+def rotate_777_Rw_prime(cube):
+    return cube[0:6] + [cube[240],cube[239]] + cube[8:13] + [cube[233],cube[232]] + cube[15:20] + [cube[226],cube[225]] + cube[22:27] + [cube[219],cube[218]] + cube[29:34] + [cube[212],cube[211]] + cube[36:41] + [cube[205],cube[204]] + cube[43:48] + [cube[198],cube[197]] + cube[50:104] + cube[6:8] + cube[106:111] + cube[13:15] + cube[113:118] + cube[20:22] + cube[120:125] + cube[27:29] + cube[127:132] + cube[34:36] + cube[134:139] + cube[41:43] + cube[141:146] + cube[48:50] + [cube[154],cube[161],cube[168],cube[175],cube[182],cube[189],cube[196],cube[153],cube[160],cube[167],cube[174],cube[181],cube[188],cube[195],cube[152],cube[159],cube[166],cube[173],cube[180],cube[187],cube[194],cube[151],cube[158],cube[165],cube[172],cube[179],cube[186],cube[193],cube[150],cube[157],cube[164],cube[171],cube[178],cube[185],cube[192],cube[149],cube[156],cube[163],cube[170],cube[177],cube[184],cube[191],cube[148],cube[155],cube[162],cube[169],cube[176],cube[183],cube[190],cube[294],cube[293]] + cube[199:204] + [cube[287],cube[286]] + cube[206:211] + [cube[280],cube[279]] + cube[213:218] + [cube[273],cube[272]] + cube[220:225] + [cube[266],cube[265]] + cube[227:232] + [cube[259],cube[258]] + cube[234:239] + [cube[252],cube[251]] + cube[241:251] + cube[104:106] + cube[253:258] + cube[111:113] + cube[260:265] + cube[118:120] + cube[267:272] + cube[125:127] + cube[274:279] + cube[132:134] + cube[281:286] + cube[139:141] + cube[288:293] + cube[146:148]
+
+def rotate_777_Rw2(cube):
+    return cube[0:6] + cube[251:253] + cube[8:13] + cube[258:260] + cube[15:20] + cube[265:267] + cube[22:27] + cube[272:274] + cube[29:34] + cube[279:281] + cube[36:41] + cube[286:288] + cube[43:48] + cube[293:295] + cube[50:104] + [cube[240],cube[239]] + cube[106:111] + [cube[233],cube[232]] + cube[113:118] + [cube[226],cube[225]] + cube[120:125] + [cube[219],cube[218]] + cube[127:132] + [cube[212],cube[211]] + cube[134:139] + [cube[205],cube[204]] + cube[141:146] + [cube[198],cube[197],cube[196],cube[195],cube[194],cube[193],cube[192],cube[191],cube[190],cube[189],cube[188],cube[187],cube[186],cube[185],cube[184],cube[183],cube[182],cube[181],cube[180],cube[179],cube[178],cube[177],cube[176],cube[175],cube[174],cube[173],cube[172],cube[171],cube[170],cube[169],cube[168],cube[167],cube[166],cube[165],cube[164],cube[163],cube[162],cube[161],cube[160],cube[159],cube[158],cube[157],cube[156],cube[155],cube[154],cube[153],cube[152],cube[151],cube[150],cube[149],cube[148],cube[147],cube[146]] + cube[199:204] + [cube[140],cube[139]] + cube[206:211] + [cube[133],cube[132]] + cube[213:218] + [cube[126],cube[125]] + cube[220:225] + [cube[119],cube[118]] + cube[227:232] + [cube[112],cube[111]] + cube[234:239] + [cube[105],cube[104]] + cube[241:251] + cube[6:8] + cube[253:258] + cube[13:15] + cube[260:265] + cube[20:22] + cube[267:272] + cube[27:29] + cube[274:279] + cube[34:36] + cube[281:286] + cube[41:43] + cube[288:293] + cube[48:50]
+
+def rotate_777_3Rw(cube):
+    return cube[0:5] + cube[103:106] + cube[8:12] + cube[110:113] + cube[15:19] + cube[117:120] + cube[22:26] + cube[124:127] + cube[29:33] + cube[131:134] + cube[36:40] + cube[138:141] + cube[43:47] + cube[145:148] + cube[50:103] + cube[250:253] + cube[106:110] + cube[257:260] + cube[113:117] + cube[264:267] + cube[120:124] + cube[271:274] + cube[127:131] + cube[278:281] + cube[134:138] + cube[285:288] + cube[141:145] + cube[292:295] + [cube[190],cube[183],cube[176],cube[169],cube[162],cube[155],cube[148],cube[191],cube[184],cube[177],cube[170],cube[163],cube[156],cube[149],cube[192],cube[185],cube[178],cube[171],cube[164],cube[157],cube[150],cube[193],cube[186],cube[179],cube[172],cube[165],cube[158],cube[151],cube[194],cube[187],cube[180],cube[173],cube[166],cube[159],cube[152],cube[195],cube[188],cube[181],cube[174],cube[167],cube[160],cube[153],cube[196],cube[189],cube[182],cube[175],cube[168],cube[161],cube[154],cube[49],cube[48],cube[47]] + cube[200:204] + [cube[42],cube[41],cube[40]] + cube[207:211] + [cube[35],cube[34],cube[33]] + cube[214:218] + [cube[28],cube[27],cube[26]] + cube[221:225] + [cube[21],cube[20],cube[19]] + cube[228:232] + [cube[14],cube[13],cube[12]] + cube[235:239] + [cube[7],cube[6],cube[5]] + cube[242:250] + [cube[241],cube[240],cube[239]] + cube[253:257] + [cube[234],cube[233],cube[232]] + cube[260:264] + [cube[227],cube[226],cube[225]] + cube[267:271] + [cube[220],cube[219],cube[218]] + cube[274:278] + [cube[213],cube[212],cube[211]] + cube[281:285] + [cube[206],cube[205],cube[204]] + cube[288:292] + [cube[199],cube[198],cube[197]]
+
+def rotate_777_3Rw_prime(cube):
+    return cube[0:5] + [cube[241],cube[240],cube[239]] + cube[8:12] + [cube[234],cube[233],cube[232]] + cube[15:19] + [cube[227],cube[226],cube[225]] + cube[22:26] + [cube[220],cube[219],cube[218]] + cube[29:33] + [cube[213],cube[212],cube[211]] + cube[36:40] + [cube[206],cube[205],cube[204]] + cube[43:47] + [cube[199],cube[198],cube[197]] + cube[50:103] + cube[5:8] + cube[106:110] + cube[12:15] + cube[113:117] + cube[19:22] + cube[120:124] + cube[26:29] + cube[127:131] + cube[33:36] + cube[134:138] + cube[40:43] + cube[141:145] + cube[47:50] + [cube[154],cube[161],cube[168],cube[175],cube[182],cube[189],cube[196],cube[153],cube[160],cube[167],cube[174],cube[181],cube[188],cube[195],cube[152],cube[159],cube[166],cube[173],cube[180],cube[187],cube[194],cube[151],cube[158],cube[165],cube[172],cube[179],cube[186],cube[193],cube[150],cube[157],cube[164],cube[171],cube[178],cube[185],cube[192],cube[149],cube[156],cube[163],cube[170],cube[177],cube[184],cube[191],cube[148],cube[155],cube[162],cube[169],cube[176],cube[183],cube[190],cube[294],cube[293],cube[292]] + cube[200:204] + [cube[287],cube[286],cube[285]] + cube[207:211] + [cube[280],cube[279],cube[278]] + cube[214:218] + [cube[273],cube[272],cube[271]] + cube[221:225] + [cube[266],cube[265],cube[264]] + cube[228:232] + [cube[259],cube[258],cube[257]] + cube[235:239] + [cube[252],cube[251],cube[250]] + cube[242:250] + cube[103:106] + cube[253:257] + cube[110:113] + cube[260:264] + cube[117:120] + cube[267:271] + cube[124:127] + cube[274:278] + cube[131:134] + cube[281:285] + cube[138:141] + cube[288:292] + cube[145:148]
+
+def rotate_777_3Rw2(cube):
+    return cube[0:5] + cube[250:253] + cube[8:12] + cube[257:260] + cube[15:19] + cube[264:267] + cube[22:26] + cube[271:274] + cube[29:33] + cube[278:281] + cube[36:40] + cube[285:288] + cube[43:47] + cube[292:295] + cube[50:103] + [cube[241],cube[240],cube[239]] + cube[106:110] + [cube[234],cube[233],cube[232]] + cube[113:117] + [cube[227],cube[226],cube[225]] + cube[120:124] + [cube[220],cube[219],cube[218]] + cube[127:131] + [cube[213],cube[212],cube[211]] + cube[134:138] + [cube[206],cube[205],cube[204]] + cube[141:145] + [cube[199],cube[198],cube[197],cube[196],cube[195],cube[194],cube[193],cube[192],cube[191],cube[190],cube[189],cube[188],cube[187],cube[186],cube[185],cube[184],cube[183],cube[182],cube[181],cube[180],cube[179],cube[178],cube[177],cube[176],cube[175],cube[174],cube[173],cube[172],cube[171],cube[170],cube[169],cube[168],cube[167],cube[166],cube[165],cube[164],cube[163],cube[162],cube[161],cube[160],cube[159],cube[158],cube[157],cube[156],cube[155],cube[154],cube[153],cube[152],cube[151],cube[150],cube[149],cube[148],cube[147],cube[146],cube[145]] + cube[200:204] + [cube[140],cube[139],cube[138]] + cube[207:211] + [cube[133],cube[132],cube[131]] + cube[214:218] + [cube[126],cube[125],cube[124]] + cube[221:225] + [cube[119],cube[118],cube[117]] + cube[228:232] + [cube[112],cube[111],cube[110]] + cube[235:239] + [cube[105],cube[104],cube[103]] + cube[242:250] + cube[5:8] + cube[253:257] + cube[12:15] + cube[260:264] + cube[19:22] + cube[267:271] + cube[26:29] + cube[274:278] + cube[33:36] + cube[281:285] + cube[40:43] + cube[288:292] + cube[47:50]
+
+def rotate_777_B(cube):
+    return [cube[0],cube[154],cube[161],cube[168],cube[175],cube[182],cube[189],cube[196]] + cube[8:50] + [cube[7]] + cube[51:57] + [cube[6]] + cube[58:64] + [cube[5]] + cube[65:71] + [cube[4]] + cube[72:78] + [cube[3]] + cube[79:85] + [cube[2]] + cube[86:92] + [cube[1]] + cube[93:154] + [cube[294]] + cube[155:161] + [cube[293]] + cube[162:168] + [cube[292]] + cube[169:175] + [cube[291]] + cube[176:182] + [cube[290]] + cube[183:189] + [cube[289]] + cube[190:196] + [cube[288],cube[239],cube[232],cube[225],cube[218],cube[211],cube[204],cube[197],cube[240],cube[233],cube[226],cube[219],cube[212],cube[205],cube[198],cube[241],cube[234],cube[227],cube[220],cube[213],cube[206],cube[199],cube[242],cube[235],cube[228],cube[221],cube[214],cube[207],cube[200],cube[243],cube[236],cube[229],cube[222],cube[215],cube[208],cube[201],cube[244],cube[237],cube[230],cube[223],cube[216],cube[209],cube[202],cube[245],cube[238],cube[231],cube[224],cube[217],cube[210],cube[203]] + cube[246:288] + [cube[50],cube[57],cube[64],cube[71],cube[78],cube[85],cube[92]]
+
+def rotate_777_B_prime(cube):
+    return [cube[0],cube[92],cube[85],cube[78],cube[71],cube[64],cube[57],cube[50]] + cube[8:50] + [cube[288]] + cube[51:57] + [cube[289]] + cube[58:64] + [cube[290]] + cube[65:71] + [cube[291]] + cube[72:78] + [cube[292]] + cube[79:85] + [cube[293]] + cube[86:92] + [cube[294]] + cube[93:154] + [cube[1]] + cube[155:161] + [cube[2]] + cube[162:168] + [cube[3]] + cube[169:175] + [cube[4]] + cube[176:182] + [cube[5]] + cube[183:189] + [cube[6]] + cube[190:196] + [cube[7],cube[203],cube[210],cube[217],cube[224],cube[231],cube[238],cube[245],cube[202],cube[209],cube[216],cube[223],cube[230],cube[237],cube[244],cube[201],cube[208],cube[215],cube[222],cube[229],cube[236],cube[243],cube[200],cube[207],cube[214],cube[221],cube[228],cube[235],cube[242],cube[199],cube[206],cube[213],cube[220],cube[227],cube[234],cube[241],cube[198],cube[205],cube[212],cube[219],cube[226],cube[233],cube[240],cube[197],cube[204],cube[211],cube[218],cube[225],cube[232],cube[239]] + cube[246:288] + [cube[196],cube[189],cube[182],cube[175],cube[168],cube[161],cube[154]]
+
+def rotate_777_B2(cube):
+    return [cube[0],cube[294],cube[293],cube[292],cube[291],cube[290],cube[289],cube[288]] + cube[8:50] + [cube[196]] + cube[51:57] + [cube[189]] + cube[58:64] + [cube[182]] + cube[65:71] + [cube[175]] + cube[72:78] + [cube[168]] + cube[79:85] + [cube[161]] + cube[86:92] + [cube[154]] + cube[93:154] + [cube[92]] + cube[155:161] + [cube[85]] + cube[162:168] + [cube[78]] + cube[169:175] + [cube[71]] + cube[176:182] + [cube[64]] + cube[183:189] + [cube[57]] + cube[190:196] + [cube[50],cube[245],cube[244],cube[243],cube[242],cube[241],cube[240],cube[239],cube[238],cube[237],cube[236],cube[235],cube[234],cube[233],cube[232],cube[231],cube[230],cube[229],cube[228],cube[227],cube[226],cube[225],cube[224],cube[223],cube[222],cube[221],cube[220],cube[219],cube[218],cube[217],cube[216],cube[215],cube[214],cube[213],cube[212],cube[211],cube[210],cube[209],cube[208],cube[207],cube[206],cube[205],cube[204],cube[203],cube[202],cube[201],cube[200],cube[199],cube[198],cube[197]] + cube[246:288] + [cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1]]
+
+def rotate_777_Bw(cube):
+    return [cube[0],cube[154],cube[161],cube[168],cube[175],cube[182],cube[189],cube[196],cube[153],cube[160],cube[167],cube[174],cube[181],cube[188],cube[195]] + cube[15:50] + [cube[7],cube[14]] + cube[52:57] + [cube[6],cube[13]] + cube[59:64] + [cube[5],cube[12]] + cube[66:71] + [cube[4],cube[11]] + cube[73:78] + [cube[3],cube[10]] + cube[80:85] + [cube[2],cube[9]] + cube[87:92] + [cube[1],cube[8]] + cube[94:153] + [cube[287],cube[294]] + cube[155:160] + [cube[286],cube[293]] + cube[162:167] + [cube[285],cube[292]] + cube[169:174] + [cube[284],cube[291]] + cube[176:181] + [cube[283],cube[290]] + cube[183:188] + [cube[282],cube[289]] + cube[190:195] + [cube[281],cube[288],cube[239],cube[232],cube[225],cube[218],cube[211],cube[204],cube[197],cube[240],cube[233],cube[226],cube[219],cube[212],cube[205],cube[198],cube[241],cube[234],cube[227],cube[220],cube[213],cube[206],cube[199],cube[242],cube[235],cube[228],cube[221],cube[214],cube[207],cube[200],cube[243],cube[236],cube[229],cube[222],cube[215],cube[208],cube[201],cube[244],cube[237],cube[230],cube[223],cube[216],cube[209],cube[202],cube[245],cube[238],cube[231],cube[224],cube[217],cube[210],cube[203]] + cube[246:281] + [cube[51],cube[58],cube[65],cube[72],cube[79],cube[86],cube[93],cube[50],cube[57],cube[64],cube[71],cube[78],cube[85],cube[92]]
+
+def rotate_777_Bw_prime(cube):
+    return [cube[0],cube[92],cube[85],cube[78],cube[71],cube[64],cube[57],cube[50],cube[93],cube[86],cube[79],cube[72],cube[65],cube[58],cube[51]] + cube[15:50] + [cube[288],cube[281]] + cube[52:57] + [cube[289],cube[282]] + cube[59:64] + [cube[290],cube[283]] + cube[66:71] + [cube[291],cube[284]] + cube[73:78] + [cube[292],cube[285]] + cube[80:85] + [cube[293],cube[286]] + cube[87:92] + [cube[294],cube[287]] + cube[94:153] + [cube[8],cube[1]] + cube[155:160] + [cube[9],cube[2]] + cube[162:167] + [cube[10],cube[3]] + cube[169:174] + [cube[11],cube[4]] + cube[176:181] + [cube[12],cube[5]] + cube[183:188] + [cube[13],cube[6]] + cube[190:195] + [cube[14],cube[7],cube[203],cube[210],cube[217],cube[224],cube[231],cube[238],cube[245],cube[202],cube[209],cube[216],cube[223],cube[230],cube[237],cube[244],cube[201],cube[208],cube[215],cube[222],cube[229],cube[236],cube[243],cube[200],cube[207],cube[214],cube[221],cube[228],cube[235],cube[242],cube[199],cube[206],cube[213],cube[220],cube[227],cube[234],cube[241],cube[198],cube[205],cube[212],cube[219],cube[226],cube[233],cube[240],cube[197],cube[204],cube[211],cube[218],cube[225],cube[232],cube[239]] + cube[246:281] + [cube[195],cube[188],cube[181],cube[174],cube[167],cube[160],cube[153],cube[196],cube[189],cube[182],cube[175],cube[168],cube[161],cube[154]]
+
+def rotate_777_Bw2(cube):
+    return [cube[0],cube[294],cube[293],cube[292],cube[291],cube[290],cube[289],cube[288],cube[287],cube[286],cube[285],cube[284],cube[283],cube[282],cube[281]] + cube[15:50] + [cube[196],cube[195]] + cube[52:57] + [cube[189],cube[188]] + cube[59:64] + [cube[182],cube[181]] + cube[66:71] + [cube[175],cube[174]] + cube[73:78] + [cube[168],cube[167]] + cube[80:85] + [cube[161],cube[160]] + cube[87:92] + [cube[154],cube[153]] + cube[94:153] + [cube[93],cube[92]] + cube[155:160] + [cube[86],cube[85]] + cube[162:167] + [cube[79],cube[78]] + cube[169:174] + [cube[72],cube[71]] + cube[176:181] + [cube[65],cube[64]] + cube[183:188] + [cube[58],cube[57]] + cube[190:195] + [cube[51],cube[50],cube[245],cube[244],cube[243],cube[242],cube[241],cube[240],cube[239],cube[238],cube[237],cube[236],cube[235],cube[234],cube[233],cube[232],cube[231],cube[230],cube[229],cube[228],cube[227],cube[226],cube[225],cube[224],cube[223],cube[222],cube[221],cube[220],cube[219],cube[218],cube[217],cube[216],cube[215],cube[214],cube[213],cube[212],cube[211],cube[210],cube[209],cube[208],cube[207],cube[206],cube[205],cube[204],cube[203],cube[202],cube[201],cube[200],cube[199],cube[198],cube[197]] + cube[246:281] + [cube[14],cube[13],cube[12],cube[11],cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1]]
+
+def rotate_777_3Bw(cube):
+    return [cube[0],cube[154],cube[161],cube[168],cube[175],cube[182],cube[189],cube[196],cube[153],cube[160],cube[167],cube[174],cube[181],cube[188],cube[195],cube[152],cube[159],cube[166],cube[173],cube[180],cube[187],cube[194]] + cube[22:50] + [cube[7],cube[14],cube[21]] + cube[53:57] + [cube[6],cube[13],cube[20]] + cube[60:64] + [cube[5],cube[12],cube[19]] + cube[67:71] + [cube[4],cube[11],cube[18]] + cube[74:78] + [cube[3],cube[10],cube[17]] + cube[81:85] + [cube[2],cube[9],cube[16]] + cube[88:92] + [cube[1],cube[8],cube[15]] + cube[95:152] + [cube[280],cube[287],cube[294]] + cube[155:159] + [cube[279],cube[286],cube[293]] + cube[162:166] + [cube[278],cube[285],cube[292]] + cube[169:173] + [cube[277],cube[284],cube[291]] + cube[176:180] + [cube[276],cube[283],cube[290]] + cube[183:187] + [cube[275],cube[282],cube[289]] + cube[190:194] + [cube[274],cube[281],cube[288],cube[239],cube[232],cube[225],cube[218],cube[211],cube[204],cube[197],cube[240],cube[233],cube[226],cube[219],cube[212],cube[205],cube[198],cube[241],cube[234],cube[227],cube[220],cube[213],cube[206],cube[199],cube[242],cube[235],cube[228],cube[221],cube[214],cube[207],cube[200],cube[243],cube[236],cube[229],cube[222],cube[215],cube[208],cube[201],cube[244],cube[237],cube[230],cube[223],cube[216],cube[209],cube[202],cube[245],cube[238],cube[231],cube[224],cube[217],cube[210],cube[203]] + cube[246:274] + [cube[52],cube[59],cube[66],cube[73],cube[80],cube[87],cube[94],cube[51],cube[58],cube[65],cube[72],cube[79],cube[86],cube[93],cube[50],cube[57],cube[64],cube[71],cube[78],cube[85],cube[92]]
+
+def rotate_777_3Bw_prime(cube):
+    return [cube[0],cube[92],cube[85],cube[78],cube[71],cube[64],cube[57],cube[50],cube[93],cube[86],cube[79],cube[72],cube[65],cube[58],cube[51],cube[94],cube[87],cube[80],cube[73],cube[66],cube[59],cube[52]] + cube[22:50] + [cube[288],cube[281],cube[274]] + cube[53:57] + [cube[289],cube[282],cube[275]] + cube[60:64] + [cube[290],cube[283],cube[276]] + cube[67:71] + [cube[291],cube[284],cube[277]] + cube[74:78] + [cube[292],cube[285],cube[278]] + cube[81:85] + [cube[293],cube[286],cube[279]] + cube[88:92] + [cube[294],cube[287],cube[280]] + cube[95:152] + [cube[15],cube[8],cube[1]] + cube[155:159] + [cube[16],cube[9],cube[2]] + cube[162:166] + [cube[17],cube[10],cube[3]] + cube[169:173] + [cube[18],cube[11],cube[4]] + cube[176:180] + [cube[19],cube[12],cube[5]] + cube[183:187] + [cube[20],cube[13],cube[6]] + cube[190:194] + [cube[21],cube[14],cube[7],cube[203],cube[210],cube[217],cube[224],cube[231],cube[238],cube[245],cube[202],cube[209],cube[216],cube[223],cube[230],cube[237],cube[244],cube[201],cube[208],cube[215],cube[222],cube[229],cube[236],cube[243],cube[200],cube[207],cube[214],cube[221],cube[228],cube[235],cube[242],cube[199],cube[206],cube[213],cube[220],cube[227],cube[234],cube[241],cube[198],cube[205],cube[212],cube[219],cube[226],cube[233],cube[240],cube[197],cube[204],cube[211],cube[218],cube[225],cube[232],cube[239]] + cube[246:274] + [cube[194],cube[187],cube[180],cube[173],cube[166],cube[159],cube[152],cube[195],cube[188],cube[181],cube[174],cube[167],cube[160],cube[153],cube[196],cube[189],cube[182],cube[175],cube[168],cube[161],cube[154]]
+
+def rotate_777_3Bw2(cube):
+    return [cube[0],cube[294],cube[293],cube[292],cube[291],cube[290],cube[289],cube[288],cube[287],cube[286],cube[285],cube[284],cube[283],cube[282],cube[281],cube[280],cube[279],cube[278],cube[277],cube[276],cube[275],cube[274]] + cube[22:50] + [cube[196],cube[195],cube[194]] + cube[53:57] + [cube[189],cube[188],cube[187]] + cube[60:64] + [cube[182],cube[181],cube[180]] + cube[67:71] + [cube[175],cube[174],cube[173]] + cube[74:78] + [cube[168],cube[167],cube[166]] + cube[81:85] + [cube[161],cube[160],cube[159]] + cube[88:92] + [cube[154],cube[153],cube[152]] + cube[95:152] + [cube[94],cube[93],cube[92]] + cube[155:159] + [cube[87],cube[86],cube[85]] + cube[162:166] + [cube[80],cube[79],cube[78]] + cube[169:173] + [cube[73],cube[72],cube[71]] + cube[176:180] + [cube[66],cube[65],cube[64]] + cube[183:187] + [cube[59],cube[58],cube[57]] + cube[190:194] + [cube[52],cube[51],cube[50],cube[245],cube[244],cube[243],cube[242],cube[241],cube[240],cube[239],cube[238],cube[237],cube[236],cube[235],cube[234],cube[233],cube[232],cube[231],cube[230],cube[229],cube[228],cube[227],cube[226],cube[225],cube[224],cube[223],cube[222],cube[221],cube[220],cube[219],cube[218],cube[217],cube[216],cube[215],cube[214],cube[213],cube[212],cube[211],cube[210],cube[209],cube[208],cube[207],cube[206],cube[205],cube[204],cube[203],cube[202],cube[201],cube[200],cube[199],cube[198],cube[197]] + cube[246:274] + [cube[21],cube[20],cube[19],cube[18],cube[17],cube[16],cube[15],cube[14],cube[13],cube[12],cube[11],cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1]]
+
+def rotate_777_D(cube):
+    return cube[0:92] + cube[239:246] + cube[99:141] + cube[92:99] + cube[148:190] + cube[141:148] + cube[197:239] + cube[190:197] + [cube[288],cube[281],cube[274],cube[267],cube[260],cube[253],cube[246],cube[289],cube[282],cube[275],cube[268],cube[261],cube[254],cube[247],cube[290],cube[283],cube[276],cube[269],cube[262],cube[255],cube[248],cube[291],cube[284],cube[277],cube[270],cube[263],cube[256],cube[249],cube[292],cube[285],cube[278],cube[271],cube[264],cube[257],cube[250],cube[293],cube[286],cube[279],cube[272],cube[265],cube[258],cube[251],cube[294],cube[287],cube[280],cube[273],cube[266],cube[259],cube[252]]
+
+def rotate_777_D_prime(cube):
+    return cube[0:92] + cube[141:148] + cube[99:141] + cube[190:197] + cube[148:190] + cube[239:246] + cube[197:239] + cube[92:99] + [cube[252],cube[259],cube[266],cube[273],cube[280],cube[287],cube[294],cube[251],cube[258],cube[265],cube[272],cube[279],cube[286],cube[293],cube[250],cube[257],cube[264],cube[271],cube[278],cube[285],cube[292],cube[249],cube[256],cube[263],cube[270],cube[277],cube[284],cube[291],cube[248],cube[255],cube[262],cube[269],cube[276],cube[283],cube[290],cube[247],cube[254],cube[261],cube[268],cube[275],cube[282],cube[289],cube[246],cube[253],cube[260],cube[267],cube[274],cube[281],cube[288]]
+
+def rotate_777_D2(cube):
+    return cube[0:92] + cube[190:197] + cube[99:141] + cube[239:246] + cube[148:190] + cube[92:99] + cube[197:239] + cube[141:148] + [cube[294],cube[293],cube[292],cube[291],cube[290],cube[289],cube[288],cube[287],cube[286],cube[285],cube[284],cube[283],cube[282],cube[281],cube[280],cube[279],cube[278],cube[277],cube[276],cube[275],cube[274],cube[273],cube[272],cube[271],cube[270],cube[269],cube[268],cube[267],cube[266],cube[265],cube[264],cube[263],cube[262],cube[261],cube[260],cube[259],cube[258],cube[257],cube[256],cube[255],cube[254],cube[253],cube[252],cube[251],cube[250],cube[249],cube[248],cube[247],cube[246]]
+
+def rotate_777_Dw(cube):
+    return cube[0:85] + cube[232:246] + cube[99:134] + cube[85:99] + cube[148:183] + cube[134:148] + cube[197:232] + cube[183:197] + [cube[288],cube[281],cube[274],cube[267],cube[260],cube[253],cube[246],cube[289],cube[282],cube[275],cube[268],cube[261],cube[254],cube[247],cube[290],cube[283],cube[276],cube[269],cube[262],cube[255],cube[248],cube[291],cube[284],cube[277],cube[270],cube[263],cube[256],cube[249],cube[292],cube[285],cube[278],cube[271],cube[264],cube[257],cube[250],cube[293],cube[286],cube[279],cube[272],cube[265],cube[258],cube[251],cube[294],cube[287],cube[280],cube[273],cube[266],cube[259],cube[252]]
+
+def rotate_777_Dw_prime(cube):
+    return cube[0:85] + cube[134:148] + cube[99:134] + cube[183:197] + cube[148:183] + cube[232:246] + cube[197:232] + cube[85:99] + [cube[252],cube[259],cube[266],cube[273],cube[280],cube[287],cube[294],cube[251],cube[258],cube[265],cube[272],cube[279],cube[286],cube[293],cube[250],cube[257],cube[264],cube[271],cube[278],cube[285],cube[292],cube[249],cube[256],cube[263],cube[270],cube[277],cube[284],cube[291],cube[248],cube[255],cube[262],cube[269],cube[276],cube[283],cube[290],cube[247],cube[254],cube[261],cube[268],cube[275],cube[282],cube[289],cube[246],cube[253],cube[260],cube[267],cube[274],cube[281],cube[288]]
+
+def rotate_777_Dw2(cube):
+    return cube[0:85] + cube[183:197] + cube[99:134] + cube[232:246] + cube[148:183] + cube[85:99] + cube[197:232] + cube[134:148] + [cube[294],cube[293],cube[292],cube[291],cube[290],cube[289],cube[288],cube[287],cube[286],cube[285],cube[284],cube[283],cube[282],cube[281],cube[280],cube[279],cube[278],cube[277],cube[276],cube[275],cube[274],cube[273],cube[272],cube[271],cube[270],cube[269],cube[268],cube[267],cube[266],cube[265],cube[264],cube[263],cube[262],cube[261],cube[260],cube[259],cube[258],cube[257],cube[256],cube[255],cube[254],cube[253],cube[252],cube[251],cube[250],cube[249],cube[248],cube[247],cube[246]]
+
+def rotate_777_3Dw(cube):
+    return cube[0:78] + cube[225:246] + cube[99:127] + cube[78:99] + cube[148:176] + cube[127:148] + cube[197:225] + cube[176:197] + [cube[288],cube[281],cube[274],cube[267],cube[260],cube[253],cube[246],cube[289],cube[282],cube[275],cube[268],cube[261],cube[254],cube[247],cube[290],cube[283],cube[276],cube[269],cube[262],cube[255],cube[248],cube[291],cube[284],cube[277],cube[270],cube[263],cube[256],cube[249],cube[292],cube[285],cube[278],cube[271],cube[264],cube[257],cube[250],cube[293],cube[286],cube[279],cube[272],cube[265],cube[258],cube[251],cube[294],cube[287],cube[280],cube[273],cube[266],cube[259],cube[252]]
+
+def rotate_777_3Dw_prime(cube):
+    return cube[0:78] + cube[127:148] + cube[99:127] + cube[176:197] + cube[148:176] + cube[225:246] + cube[197:225] + cube[78:99] + [cube[252],cube[259],cube[266],cube[273],cube[280],cube[287],cube[294],cube[251],cube[258],cube[265],cube[272],cube[279],cube[286],cube[293],cube[250],cube[257],cube[264],cube[271],cube[278],cube[285],cube[292],cube[249],cube[256],cube[263],cube[270],cube[277],cube[284],cube[291],cube[248],cube[255],cube[262],cube[269],cube[276],cube[283],cube[290],cube[247],cube[254],cube[261],cube[268],cube[275],cube[282],cube[289],cube[246],cube[253],cube[260],cube[267],cube[274],cube[281],cube[288]]
+
+def rotate_777_3Dw2(cube):
+    return cube[0:78] + cube[176:197] + cube[99:127] + cube[225:246] + cube[148:176] + cube[78:99] + cube[197:225] + cube[127:148] + [cube[294],cube[293],cube[292],cube[291],cube[290],cube[289],cube[288],cube[287],cube[286],cube[285],cube[284],cube[283],cube[282],cube[281],cube[280],cube[279],cube[278],cube[277],cube[276],cube[275],cube[274],cube[273],cube[272],cube[271],cube[270],cube[269],cube[268],cube[267],cube[266],cube[265],cube[264],cube[263],cube[262],cube[261],cube[260],cube[259],cube[258],cube[257],cube[256],cube[255],cube[254],cube[253],cube[252],cube[251],cube[250],cube[249],cube[248],cube[247],cube[246]]
+
+def rotate_777_x(cube):
+    return [cube[0]] + cube[99:148] + [cube[56],cube[63],cube[70],cube[77],cube[84],cube[91],cube[98],cube[55],cube[62],cube[69],cube[76],cube[83],cube[90],cube[97],cube[54],cube[61],cube[68],cube[75],cube[82],cube[89],cube[96],cube[53],cube[60],cube[67],cube[74],cube[81],cube[88],cube[95],cube[52],cube[59],cube[66],cube[73],cube[80],cube[87],cube[94],cube[51],cube[58],cube[65],cube[72],cube[79],cube[86],cube[93],cube[50],cube[57],cube[64],cube[71],cube[78],cube[85],cube[92]] + cube[246:295] + [cube[190],cube[183],cube[176],cube[169],cube[162],cube[155],cube[148],cube[191],cube[184],cube[177],cube[170],cube[163],cube[156],cube[149],cube[192],cube[185],cube[178],cube[171],cube[164],cube[157],cube[150],cube[193],cube[186],cube[179],cube[172],cube[165],cube[158],cube[151],cube[194],cube[187],cube[180],cube[173],cube[166],cube[159],cube[152],cube[195],cube[188],cube[181],cube[174],cube[167],cube[160],cube[153],cube[196],cube[189],cube[182],cube[175],cube[168],cube[161],cube[154],cube[49],cube[48],cube[47],cube[46],cube[45],cube[44],cube[43],cube[42],cube[41],cube[40],cube[39],cube[38],cube[37],cube[36],cube[35],cube[34],cube[33],cube[32],cube[31],cube[30],cube[29],cube[28],cube[27],cube[26],cube[25],cube[24],cube[23],cube[22],cube[21],cube[20],cube[19],cube[18],cube[17],cube[16],cube[15],cube[14],cube[13],cube[12],cube[11],cube[10],cube[9],cube[8],cube[7],cube[6],cube[5],cube[4],cube[3],cube[2],cube[1],cube[245],cube[244],cube[243],cube[242],cube[241],cube[240],cube[239],cube[238],cube[237],cube[236],cube[235],cube[234],cube[233],cube[232],cube[231],cube[230],cube[229],cube[228],cube[227],cube[226],cube[225],cube[224],cube[223],cube[222],cube[221],cube[220],cube[219],cube[218],cube[217],cube[216],cube[215],cube[214],cube[213],cube[212],cube[211],cube[210],cube[209],cube[208],cube[207],cube[206],cube[205],cube[204],cube[203],cube[202],cube[201],cube[200],cube[199],cube[198],cube[197]]
+
+def rotate_777_x_prime(cube):
+    return [cube[0],cube[245],cube[244],cube[243],cube[242],cube[241],cube[240],cube[239],cube[238],cube[237],cube[236],cube[235],cube[234],cube[233],cube[232],cube[231],cube[230],cube[229],cube[228],cube[227],cube[226],cube[225],cube[224],cube[223],cube[222],cube[221],cube[220],cube[219],cube[218],cube[217],cube[216],cube[215],cube[214],cube[213],cube[212],cube[211],cube[210],cube[209],cube[208],cube[207],cube[206],cube[205],cube[204],cube[203],cube[202],cube[201],cube[200],cube[199],cube[198],cube[197],cube[92],cube[85],cube[78],cube[71],cube[64],cube[57],cube[50],cube[93],cube[86],cube[79],cube[72],cube[65],cube[58],cube[51],cube[94],cube[87],cube[80],cube[73],cube[66],cube[59],cube[52],cube[95],cube[88],cube[81],cube[74],cube[67],cube[60],cube[53],cube[96],cube[89],cube[82],cube[75],cube[68],cube[61],cube[54],cube[97],cube[90],cube[83],cube[76],cube[69],cube[62],cube[55],cube[98],cube[91],cube[84],cube[77],cube[70],cube[63],cube[56]] + cube[1:50] + [cube[154],cube[161],cube[168],cube[175],cube[182],cube[189],cube[196],cube[153],cube[160],cube[167],cube[174],cube[181],cube[188],cube[195],cube[152],cube[159],cube[166],cube[173],cube[180],cube[187],cube[194],cube[151],cube[158],cube[165],cube[172],cube[179],cube[186],cube[193],cube[150],cube[157],cube[164],cube[171],cube[178],cube[185],cube[192],cube[149],cube[156],cube[163],cube[170],cube[177],cube[184],cube[191],cube[148],cube[155],cube[162],cube[169],cube[176],cube[183],cube[190],cube[294],cube[293],cube[292],cube[291],cube[290],cube[289],cube[288],cube[287],cube[286],cube[285],cube[284],cube[283],cube[282],cube[281],cube[280],cube[279],cube[278],cube[277],cube[276],cube[275],cube[274],cube[273],cube[272],cube[271],cube[270],cube[269],cube[268],cube[267],cube[266],cube[265],cube[264],cube[263],cube[262],cube[261],cube[260],cube[259],cube[258],cube[257],cube[256],cube[255],cube[254],cube[253],cube[252],cube[251],cube[250],cube[249],cube[248],cube[247],cube[246]] + cube[99:148]
+
+def rotate_777_y(cube):
+    return [cube[0],cube[43],cube[36],cube[29],cube[22],cube[15],cube[8],cube[1],cube[44],cube[37],cube[30],cube[23],cube[16],cube[9],cube[2],cube[45],cube[38],cube[31],cube[24],cube[17],cube[10],cube[3],cube[46],cube[39],cube[32],cube[25],cube[18],cube[11],cube[4],cube[47],cube[40],cube[33],cube[26],cube[19],cube[12],cube[5],cube[48],cube[41],cube[34],cube[27],cube[20],cube[13],cube[6],cube[49],cube[42],cube[35],cube[28],cube[21],cube[14],cube[7]] + cube[99:246] + cube[50:99] + [cube[252],cube[259],cube[266],cube[273],cube[280],cube[287],cube[294],cube[251],cube[258],cube[265],cube[272],cube[279],cube[286],cube[293],cube[250],cube[257],cube[264],cube[271],cube[278],cube[285],cube[292],cube[249],cube[256],cube[263],cube[270],cube[277],cube[284],cube[291],cube[248],cube[255],cube[262],cube[269],cube[276],cube[283],cube[290],cube[247],cube[254],cube[261],cube[268],cube[275],cube[282],cube[289],cube[246],cube[253],cube[260],cube[267],cube[274],cube[281],cube[288]]
+
+def rotate_777_y_prime(cube):
+    return [cube[0],cube[7],cube[14],cube[21],cube[28],cube[35],cube[42],cube[49],cube[6],cube[13],cube[20],cube[27],cube[34],cube[41],cube[48],cube[5],cube[12],cube[19],cube[26],cube[33],cube[40],cube[47],cube[4],cube[11],cube[18],cube[25],cube[32],cube[39],cube[46],cube[3],cube[10],cube[17],cube[24],cube[31],cube[38],cube[45],cube[2],cube[9],cube[16],cube[23],cube[30],cube[37],cube[44],cube[1],cube[8],cube[15],cube[22],cube[29],cube[36],cube[43]] + cube[197:246] + cube[50:197] + [cube[288],cube[281],cube[274],cube[267],cube[260],cube[253],cube[246],cube[289],cube[282],cube[275],cube[268],cube[261],cube[254],cube[247],cube[290],cube[283],cube[276],cube[269],cube[262],cube[255],cube[248],cube[291],cube[284],cube[277],cube[270],cube[263],cube[256],cube[249],cube[292],cube[285],cube[278],cube[271],cube[264],cube[257],cube[250],cube[293],cube[286],cube[279],cube[272],cube[265],cube[258],cube[251],cube[294],cube[287],cube[280],cube[273],cube[266],cube[259],cube[252]]
+
+def rotate_777_z(cube):
+    return [cube[0],cube[92],cube[85],cube[78],cube[71],cube[64],cube[57],cube[50],cube[93],cube[86],cube[79],cube[72],cube[65],cube[58],cube[51],cube[94],cube[87],cube[80],cube[73],cube[66],cube[59],cube[52],cube[95],cube[88],cube[81],cube[74],cube[67],cube[60],cube[53],cube[96],cube[89],cube[82],cube[75],cube[68],cube[61],cube[54],cube[97],cube[90],cube[83],cube[76],cube[69],cube[62],cube[55],cube[98],cube[91],cube[84],cube[77],cube[70],cube[63],cube[56],cube[288],cube[281],cube[274],cube[267],cube[260],cube[253],cube[246],cube[289],cube[282],cube[275],cube[268],cube[261],cube[254],cube[247],cube[290],cube[283],cube[276],cube[269],cube[262],cube[255],cube[248],cube[291],cube[284],cube[277],cube[270],cube[263],cube[256],cube[249],cube[292],cube[285],cube[278],cube[271],cube[264],cube[257],cube[250],cube[293],cube[286],cube[279],cube[272],cube[265],cube[258],cube[251],cube[294],cube[287],cube[280],cube[273],cube[266],cube[259],cube[252],cube[141],cube[134],cube[127],cube[120],cube[113],cube[106],cube[99],cube[142],cube[135],cube[128],cube[121],cube[114],cube[107],cube[100],cube[143],cube[136],cube[129],cube[122],cube[115],cube[108],cube[101],cube[144],cube[137],cube[130],cube[123],cube[116],cube[109],cube[102],cube[145],cube[138],cube[131],cube[124],cube[117],cube[110],cube[103],cube[146],cube[139],cube[132],cube[125],cube[118],cube[111],cube[104],cube[147],cube[140],cube[133],cube[126],cube[119],cube[112],cube[105],cube[43],cube[36],cube[29],cube[22],cube[15],cube[8],cube[1],cube[44],cube[37],cube[30],cube[23],cube[16],cube[9],cube[2],cube[45],cube[38],cube[31],cube[24],cube[17],cube[10],cube[3],cube[46],cube[39],cube[32],cube[25],cube[18],cube[11],cube[4],cube[47],cube[40],cube[33],cube[26],cube[19],cube[12],cube[5],cube[48],cube[41],cube[34],cube[27],cube[20],cube[13],cube[6],cube[49],cube[42],cube[35],cube[28],cube[21],cube[14],cube[7],cube[203],cube[210],cube[217],cube[224],cube[231],cube[238],cube[245],cube[202],cube[209],cube[216],cube[223],cube[230],cube[237],cube[244],cube[201],cube[208],cube[215],cube[222],cube[229],cube[236],cube[243],cube[200],cube[207],cube[214],cube[221],cube[228],cube[235],cube[242],cube[199],cube[206],cube[213],cube[220],cube[227],cube[234],cube[241],cube[198],cube[205],cube[212],cube[219],cube[226],cube[233],cube[240],cube[197],cube[204],cube[211],cube[218],cube[225],cube[232],cube[239],cube[190],cube[183],cube[176],cube[169],cube[162],cube[155],cube[148],cube[191],cube[184],cube[177],cube[170],cube[163],cube[156],cube[149],cube[192],cube[185],cube[178],cube[171],cube[164],cube[157],cube[150],cube[193],cube[186],cube[179],cube[172],cube[165],cube[158],cube[151],cube[194],cube[187],cube[180],cube[173],cube[166],cube[159],cube[152],cube[195],cube[188],cube[181],cube[174],cube[167],cube[160],cube[153],cube[196],cube[189],cube[182],cube[175],cube[168],cube[161],cube[154]]
+
+def rotate_777_z_prime(cube):
+    return [cube[0],cube[154],cube[161],cube[168],cube[175],cube[182],cube[189],cube[196],cube[153],cube[160],cube[167],cube[174],cube[181],cube[188],cube[195],cube[152],cube[159],cube[166],cube[173],cube[180],cube[187],cube[194],cube[151],cube[158],cube[165],cube[172],cube[179],cube[186],cube[193],cube[150],cube[157],cube[164],cube[171],cube[178],cube[185],cube[192],cube[149],cube[156],cube[163],cube[170],cube[177],cube[184],cube[191],cube[148],cube[155],cube[162],cube[169],cube[176],cube[183],cube[190],cube[7],cube[14],cube[21],cube[28],cube[35],cube[42],cube[49],cube[6],cube[13],cube[20],cube[27],cube[34],cube[41],cube[48],cube[5],cube[12],cube[19],cube[26],cube[33],cube[40],cube[47],cube[4],cube[11],cube[18],cube[25],cube[32],cube[39],cube[46],cube[3],cube[10],cube[17],cube[24],cube[31],cube[38],cube[45],cube[2],cube[9],cube[16],cube[23],cube[30],cube[37],cube[44],cube[1],cube[8],cube[15],cube[22],cube[29],cube[36],cube[43],cube[105],cube[112],cube[119],cube[126],cube[133],cube[140],cube[147],cube[104],cube[111],cube[118],cube[125],cube[132],cube[139],cube[146],cube[103],cube[110],cube[117],cube[124],cube[131],cube[138],cube[145],cube[102],cube[109],cube[116],cube[123],cube[130],cube[137],cube[144],cube[101],cube[108],cube[115],cube[122],cube[129],cube[136],cube[143],cube[100],cube[107],cube[114],cube[121],cube[128],cube[135],cube[142],cube[99],cube[106],cube[113],cube[120],cube[127],cube[134],cube[141],cube[252],cube[259],cube[266],cube[273],cube[280],cube[287],cube[294],cube[251],cube[258],cube[265],cube[272],cube[279],cube[286],cube[293],cube[250],cube[257],cube[264],cube[271],cube[278],cube[285],cube[292],cube[249],cube[256],cube[263],cube[270],cube[277],cube[284],cube[291],cube[248],cube[255],cube[262],cube[269],cube[276],cube[283],cube[290],cube[247],cube[254],cube[261],cube[268],cube[275],cube[282],cube[289],cube[246],cube[253],cube[260],cube[267],cube[274],cube[281],cube[288],cube[239],cube[232],cube[225],cube[218],cube[211],cube[204],cube[197],cube[240],cube[233],cube[226],cube[219],cube[212],cube[205],cube[198],cube[241],cube[234],cube[227],cube[220],cube[213],cube[206],cube[199],cube[242],cube[235],cube[228],cube[221],cube[214],cube[207],cube[200],cube[243],cube[236],cube[229],cube[222],cube[215],cube[208],cube[201],cube[244],cube[237],cube[230],cube[223],cube[216],cube[209],cube[202],cube[245],cube[238],cube[231],cube[224],cube[217],cube[210],cube[203],cube[56],cube[63],cube[70],cube[77],cube[84],cube[91],cube[98],cube[55],cube[62],cube[69],cube[76],cube[83],cube[90],cube[97],cube[54],cube[61],cube[68],cube[75],cube[82],cube[89],cube[96],cube[53],cube[60],cube[67],cube[74],cube[81],cube[88],cube[95],cube[52],cube[59],cube[66],cube[73],cube[80],cube[87],cube[94],cube[51],cube[58],cube[65],cube[72],cube[79],cube[86],cube[93],cube[50],cube[57],cube[64],cube[71],cube[78],cube[85],cube[92]]
+
+rotate_mapper_777 = {
+    "3Bw" : rotate_777_3Bw,
+    "3Bw'" : rotate_777_3Bw_prime,
+    "3Bw2" : rotate_777_3Bw2,
+    "3Dw" : rotate_777_3Dw,
+    "3Dw'" : rotate_777_3Dw_prime,
+    "3Dw2" : rotate_777_3Dw2,
+    "3Fw" : rotate_777_3Fw,
+    "3Fw'" : rotate_777_3Fw_prime,
+    "3Fw2" : rotate_777_3Fw2,
+    "3Lw" : rotate_777_3Lw,
+    "3Lw'" : rotate_777_3Lw_prime,
+    "3Lw2" : rotate_777_3Lw2,
+    "3Rw" : rotate_777_3Rw,
+    "3Rw'" : rotate_777_3Rw_prime,
+    "3Rw2" : rotate_777_3Rw2,
+    "3Uw" : rotate_777_3Uw,
+    "3Uw'" : rotate_777_3Uw_prime,
+    "3Uw2" : rotate_777_3Uw2,
+    "B" : rotate_777_B,
+    "B'" : rotate_777_B_prime,
+    "B2" : rotate_777_B2,
+    "Bw" : rotate_777_Bw,
+    "Bw'" : rotate_777_Bw_prime,
+    "Bw2" : rotate_777_Bw2,
+    "D" : rotate_777_D,
+    "D'" : rotate_777_D_prime,
+    "D2" : rotate_777_D2,
+    "Dw" : rotate_777_Dw,
+    "Dw'" : rotate_777_Dw_prime,
+    "Dw2" : rotate_777_Dw2,
+    "F" : rotate_777_F,
+    "F'" : rotate_777_F_prime,
+    "F2" : rotate_777_F2,
+    "Fw" : rotate_777_Fw,
+    "Fw'" : rotate_777_Fw_prime,
+    "Fw2" : rotate_777_Fw2,
+    "L" : rotate_777_L,
+    "L'" : rotate_777_L_prime,
+    "L2" : rotate_777_L2,
+    "Lw" : rotate_777_Lw,
+    "Lw'" : rotate_777_Lw_prime,
+    "Lw2" : rotate_777_Lw2,
+    "R" : rotate_777_R,
+    "R'" : rotate_777_R_prime,
+    "R2" : rotate_777_R2,
+    "Rw" : rotate_777_Rw,
+    "Rw'" : rotate_777_Rw_prime,
+    "Rw2" : rotate_777_Rw2,
+    "U" : rotate_777_U,
+    "U'" : rotate_777_U_prime,
+    "U2" : rotate_777_U2,
+    "Uw" : rotate_777_Uw,
+    "Uw'" : rotate_777_Uw_prime,
+    "Uw2" : rotate_777_Uw2,
+    "x" : rotate_777_x,
+    "x'" : rotate_777_x_prime,
+    "y" : rotate_777_y,
+    "y'" : rotate_777_y_prime,
+    "z" : rotate_777_z,
+    "z'" : rotate_777_z_prime,
+}
+
+def rotate_777(cube, step):
+    return rotate_mapper_777[step](cube)

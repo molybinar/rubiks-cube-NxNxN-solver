@@ -13,7 +13,6 @@ class RubiksCubeNNNEvenEdges(RubiksCube):
 
     def pair_inside_edges_via_444(self):
         fake_444 = RubiksCube444(solved_4x4x4, 'URFDLB')
-        fake_444.cpu_mode = self.cpu_mode
         fake_444.lt_init()
 
         # Fill in the corners so that we can avoid PLL parity when pairing the edges
@@ -69,12 +68,11 @@ class RubiksCubeNNNEvenEdges(RubiksCube):
 
             self.rotate(step)
 
-        log.info("Inside edges are paired, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
+        log.info("%s: Inside edges are paired, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
 
     def pair_edge_orbit_via_555(self, orbit):
-        log.info("pair_edge_orbit_via_555 for %d" % orbit)
+        log.info("%s: pair_edge_orbit_via_555 for %d" % (self, orbit))
         fake_555 = RubiksCube555(solved_5x5x5, 'URFDLB')
-        fake_555.cpu_mode = self.cpu_mode
         fake_555.lt_init()
 
         # Fill in the corners so we can avoid certain types of parity
@@ -189,5 +187,5 @@ class RubiksCubeNNNEvenEdges(RubiksCube):
             self.pair_edge_orbit_via_555(orbit)
 
         self.solution.append('EDGES_GROUPED')
-        log.info("Edges are paired, %d steps in" % self.get_solution_len_minus_rotates(self.solution))
+        log.info("%s: Edges are paired, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         self.print_cube()
