@@ -2661,6 +2661,19 @@ class RubiksCube(object):
                     return False
         return True
 
+    def FB_centers_staged(self):
+        for side in (self.sideL, self.sideR):
+            for pos in side.center_pos:
+                if self.state[pos] not in ('F', 'B'):
+                    return False
+        return True
+
+    def centers_staged(self):
+        if self.UD_centers_staged() and self.LR_centers_staged() and self.FB_centers_staged():
+            return True
+        else:
+            return False
+
     def rotate_side_X_to_Y(self, x, y):
         #assert x in ('U', 'L', 'F', 'R', 'B', 'D'), "Invalid side %s" % x
         #assert y in ('U', 'L', 'F', 'R', 'B', 'D'), "Invalid side %s" % y
