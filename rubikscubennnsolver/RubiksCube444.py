@@ -251,7 +251,8 @@ class LookupTable444UDCentersStageCostOnly(LookupTableCostOnly):
             'lookup-table-4x4x4-step11-UD-centers-stage.cost-only.txt',
             'f0000f',
             linecount=735471,
-            max_depth=9)
+            max_depth=9,
+            load_string=False)
 
     def state(self):
         parent_state = self.parent.state
@@ -268,7 +269,8 @@ class LookupTable444LRCentersStageCostOnly(LookupTableCostOnly):
             'lookup-table-4x4x4-step12-LR-centers-stage.cost-only.txt',
             '0f0f00',
             linecount=735471,
-            max_depth=9)
+            max_depth=9,
+            load_string=False)
 
     def state(self):
         parent_state = self.parent.state
@@ -285,7 +287,8 @@ class LookupTable444FBCentersStageCostOnly(LookupTableCostOnly):
             'lookup-table-4x4x4-step13-FB-centers-stage.cost-only.txt',
             '00f0f0',
             linecount=735471,
-            max_depth=9)
+            max_depth=9,
+            load_string=False)
 
     def state(self):
         parent_state = self.parent.state

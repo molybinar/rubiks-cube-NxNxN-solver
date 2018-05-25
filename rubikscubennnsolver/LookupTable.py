@@ -71,6 +71,78 @@ def steps_cancel_out(prev_step, step):
     return False
 
 
+def steps_on_same_face(prev_step, step):
+    """
+    >>> steps_on_same_face(None, "U")
+    False
+
+    >>> steps_on_same_face("U", "U")
+    True
+
+    >>> steps_on_same_face("U", "U'")
+    True
+
+    >>> steps_on_same_face("U", "U2")
+    True
+
+    >>> steps_on_same_face("U", "D")
+    False
+
+    >>> steps_on_same_face("U", "D'")
+    False
+
+    >>> steps_on_same_face("U", "D2")
+    False
+
+    >>> steps_on_same_face("U", "Uw")
+    True
+
+    >>> steps_on_same_face("3Uw2", "3Uw")
+    True
+
+    >>> steps_on_same_face("Uw2", "3Uw")
+    True
+    """
+    # dwalton
+    if prev_step is None:
+        return False
+
+    # chop the trailing '
+    if prev_step[-1] == "'":
+        prev_step = prev_step[:-1]
+
+    if step[-1] == "'":
+        step = step[:-1]
+
+    # chop the trailing 2
+    if prev_step[-1] == "2":
+        prev_step = prev_step[:-1]
+
+    if step[-1] == "2":
+        step = step[:-1]
+
+
+    # chop the leading number
+    if prev_step[0].isdigit():
+        prev_step = prev_step[1:]
+
+    if step[0].isdigit():
+        step = step[1:]
+
+    # chop the w
+    if 'w' in prev_step:
+        prev_step = prev_step.replace('w', '')
+
+    if 'w' in step:
+        step = step.replace('w', '')
+
+    if prev_step == step:
+        return True
+
+    return False
+
+
+
 def steps_on_same_face_and_layer(prev_step, step):
     """
     >>> steps_on_same_face_and_layer(None, "U")
