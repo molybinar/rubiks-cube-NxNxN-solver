@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 import datetime as dt
+from collections import deque
 from pprint import pformat
 from rubikscubennnsolver.RubiksSide import SolveError
 from subprocess import call
 import logging
 import os
-
+import sys
 
 log = logging.getLogger(__name__)
 
@@ -941,6 +942,227 @@ class LookupTableIDA(LookupTable):
 
         self.parent.state = prev_state[:]
         return (f_cost, False)
+
+    def get_min_heuristic_total(self, prev_step, tmp_state, tmp_solution, max_depth):
+        # dwalton
+        """
+        Try all move sequences up to 3 moves deep, find the min ida_heuristic_total
+        - 36^2 is 1,296
+        - 36^3 is 46,656
+        - 36^4 is 1,679,616
+        - 36^5 is 60,466,176
+        """
+        min_ida_heuristic_total = None
+        min_ida_heuristic_total_steps = []
+        count = 0
+
+        for step1 in self.moves_all:
+
+            if steps_on_same_face_and_layer(prev_step, step1):
+                continue
+
+            self.parent.state = tmp_state[:]
+            self.parent.solution = tmp_solution[:]
+
+            self.parent.rotate(step1)
+            step1_state = self.parent.state[:]
+            step1_solution = self.parent.solution[:]
+
+            for step2 in self.moves_all:
+
+                if steps_on_same_face_and_layer(step1, step2):
+                    continue
+
+                self.parent.state = step1_state[:]
+                self.parent.solution =  step1_solution[:]
+
+                self.parent.rotate(step2)
+                step2_state = self.parent.state[:]
+                step2_solution = self.parent.solution[:]
+
+                if max_depth == 2:
+
+                    state = self.state()
+                    steps = self.steps(state)
+
+                    if steps:
+                        ida_heuristic_total = 0
+                    else:
+                        ida_heuristic_total = self.ida_heuristic_total()
+
+                    if min_ida_heuristic_total is None or ida_heuristic_total < min_ida_heuristic_total:
+                        min_ida_heuristic_total = ida_heuristic_total
+
+                        if steps:
+                            #min_ida_heuristic_total_steps = [step1, step2] + steps
+                            min_ida_heuristic_total_steps = [step1, step2] + steps
+                        else:
+                            #min_ida_heuristic_total_steps = [step1, step2]
+                            min_ida_heuristic_total_steps = [step1, step2]
+
+                    count += 1
+
+                elif max_depth == 3:
+                    for step3 in self.moves_all:
+
+                        if steps_on_same_face_and_layer(step2, step3):
+                            continue
+
+                        self.parent.state = step2_state[:]
+                        self.parent.solution =  step2_solution[:]
+                        self.parent.rotate(step3)
+
+                        state = self.state()
+                        steps = self.steps(state)
+
+                        if steps:
+                            ida_heuristic_total = 0
+                        else:
+                            ida_heuristic_total = self.ida_heuristic_total()
+
+                        if min_ida_heuristic_total is None or ida_heuristic_total < min_ida_heuristic_total:
+                            min_ida_heuristic_total = ida_heuristic_total
+
+                            if steps:
+                                #min_ida_heuristic_total_steps = [step1, step2] + steps
+                                min_ida_heuristic_total_steps = [step1, step2, step3] + steps
+                            else:
+                                #min_ida_heuristic_total_steps = [step1, step2]
+                                min_ida_heuristic_total_steps = [step1, step2, step3]
+
+                        count += 1
+
+                else:
+                    raise Exception("max_depth is %s, it must be 2 or 3" % max_depth)
+
+        log.info("count %d, min_ida_heuristic_total %s, min_ida_heuristic_total_steps %s" % (count, min_ida_heuristic_total, ' '.join(min_ida_heuristic_total_steps)))
+        return (min_ida_heuristic_total, min_ida_heuristic_total_steps)
+
+    def dwalton_solve(self):
+        """
+        """
+        state = self.state()
+        steps = self.steps(state)
+
+        # The cube is in the desired state
+        if state in self.state_target:
+            log.info("%s: cube is at target state %s" % (self, state))
+            return True
+
+        # The cube is in a state that is in our lookup table
+        if steps:
+            log.info("%s: cube is in state %s which is in our lookup table" % (self, state))
+
+            # The cube is now in a state where it is in the lookup table, we may need
+            # to do several lookups to get to our target state though. Use
+            # LookupTabele's solve() to take us the rest of the way to the target state.
+            LookupTable.solve(self)
+            return True
+
+        # save cube state
+        self.original_state = self.parent.state[:]
+        self.original_solution = self.parent.solution[:]
+
+        cost_to_goal = self.ida_heuristic_total()
+        workq = deque()
+        workq.append((0, cost_to_goal, []))
+        start_time0 = dt.datetime.now()
+
+        # Perform a BFS until we find a sequence of moves that takes us to a
+        # state that IS in the lookup table.
+        while True:
+
+            # Apply the steps for this workq entry
+            self.parent.state = self.original_state[:]
+            self.parent.solution = self.original_solution[:]
+
+            (cost_to_here, cost_to_goal, workq_steps) = workq.popleft()
+            prev_step = None
+            log.info("workq_steps %s" % ' '.join(workq_steps))
+
+            for step in workq_steps:
+                self.parent.rotate(step)
+                prev_step = step
+
+            state = self.state()
+            steps = self.steps(state)
+
+            # The cube is in the desired state
+            if state in self.state_target:
+                log.info("%s: cube is at target state %s" % (self, state))
+                return True
+
+            # The cube is in a state that is in our lookup table
+            if steps:
+                log.info("%s: cube is in state %s which is in our lookup table" % (self, state))
+
+                # The cube is now in a state where it is in the lookup table, we may need
+                # to do several lookups to get to our target state though. Use
+                # LookupTabele's solve() to take us the rest of the way to the target state.
+                LookupTable.solve(self)
+                return True
+
+            # save cube state
+            tmp_state = self.parent.state[:]
+            tmp_solution = self.parent.solution[:]
+
+            steps = None
+            step_result = []
+
+            # dwalton here now
+            # We must decide what move to make to hopefully advance the
+            # cube towards our goal state.
+            for step in self.moves_all:
+
+                if steps_on_same_face_and_layer(prev_step, step):
+                    continue
+
+                self.parent.state = tmp_state[:]
+                self.parent.solution = tmp_solution[:]
+                self.parent.rotate(step)
+
+                max_depth = 2
+                (min_heuristic_total, min_heuristic_total_steps) = self.get_min_heuristic_total(step, self.parent.state[:], self.parent.solution[:], max_depth)
+
+                if min_heuristic_total == 0:
+                    self.parent.state = tmp_state[:]
+                    self.parent.solution = tmp_solution[:]
+                    self.parent.rotate(step)
+
+                    for step in min_heuristic_total_steps:
+                        self.parent.rotate(step)
+
+                    #self.parent.print_cube()
+                    log.warning("FOUND SOLUTION")
+                    return True
+
+                else:
+                    step_result.append((min_heuristic_total, step))
+
+            #log.info("step_result:\n%s\n" % pformat(step_result))
+            step_result = sorted(step_result)
+            log.info("step_result:\n%s\n" % pformat(step_result))
+            #sys.exit(0)
+
+            best_cost_to_goal = None
+
+            for (cost_to_goal, step) in step_result:
+                if best_cost_to_goal is None:
+                    best_cost_to_goal = cost_to_goal
+
+                if cost_to_goal > best_cost_to_goal:
+                    break
+
+                steps = workq_steps + [step,]
+                cost_to_here = len(steps)
+                workq.append((cost_to_here, cost_to_goal, steps))
+
+            workq = deque(sorted(workq))
+            log.info("workq: %s" % pformat(workq))
+            log.info("\n\n")
+            #sys.exit(0)
+
+        raise SolveError("Could not find solution")
 
     def solve(self, min_ida_threshold=None, max_ida_threshold=99):
         """

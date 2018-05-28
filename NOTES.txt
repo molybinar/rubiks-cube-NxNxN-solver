@@ -1,0 +1,15 @@
+
+Need to determine next move
+- try all 36 moves, are there any that give us a hit in our lookup table?
+
+- try all 36 moves, are there any moves that reduce the heuristic for all prune tables?
+  This seems very unlikely but if there is it would be the obvious choice for next move.
+
+- try all 36 moves and rank them based on the total heuristic.  Only keep the best 10% of moves?
+
+- have some cap on how deep we are willing to search
+
+36^2 is 1,296
+36^3 is 46,656
+36^4 is 1,679,616
+36^5 is 60,466,176
