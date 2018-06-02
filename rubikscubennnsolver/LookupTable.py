@@ -943,101 +943,6 @@ class LookupTableIDA(LookupTable):
         self.parent.state = prev_state[:]
         return (f_cost, False)
 
-    def get_min_heuristic_total(self, prev_step, tmp_state, tmp_solution, max_depth):
-        # dwalton
-        """
-        Try all move sequences up to 3 moves deep, find the min ida_heuristic_total
-        - 36^2 is 1,296
-        - 36^3 is 46,656
-        - 36^4 is 1,679,616
-        - 36^5 is 60,466,176
-        """
-        min_ida_heuristic_total = None
-        min_ida_heuristic_total_steps = []
-        count = 0
-
-        for step1 in self.moves_all:
-
-            if steps_on_same_face_and_layer(prev_step, step1):
-                continue
-
-            self.parent.state = tmp_state[:]
-            self.parent.solution = tmp_solution[:]
-
-            self.parent.rotate(step1)
-            step1_state = self.parent.state[:]
-            step1_solution = self.parent.solution[:]
-
-            for step2 in self.moves_all:
-
-                if steps_on_same_face_and_layer(step1, step2):
-                    continue
-
-                self.parent.state = step1_state[:]
-                self.parent.solution =  step1_solution[:]
-
-                self.parent.rotate(step2)
-                step2_state = self.parent.state[:]
-                step2_solution = self.parent.solution[:]
-
-                if max_depth == 2:
-
-                    state = self.state()
-                    steps = self.steps(state)
-
-                    if steps:
-                        ida_heuristic_total = 0
-                    else:
-                        ida_heuristic_total = self.ida_heuristic_total()
-
-                    if min_ida_heuristic_total is None or ida_heuristic_total < min_ida_heuristic_total:
-                        min_ida_heuristic_total = ida_heuristic_total
-
-                        if steps:
-                            #min_ida_heuristic_total_steps = [step1, step2] + steps
-                            min_ida_heuristic_total_steps = [step1, step2] + steps
-                        else:
-                            #min_ida_heuristic_total_steps = [step1, step2]
-                            min_ida_heuristic_total_steps = [step1, step2]
-
-                    count += 1
-
-                elif max_depth == 3:
-                    for step3 in self.moves_all:
-
-                        if steps_on_same_face_and_layer(step2, step3):
-                            continue
-
-                        self.parent.state = step2_state[:]
-                        self.parent.solution =  step2_solution[:]
-                        self.parent.rotate(step3)
-
-                        state = self.state()
-                        steps = self.steps(state)
-
-                        if steps:
-                            ida_heuristic_total = 0
-                        else:
-                            ida_heuristic_total = self.ida_heuristic_total()
-
-                        if min_ida_heuristic_total is None or ida_heuristic_total < min_ida_heuristic_total:
-                            min_ida_heuristic_total = ida_heuristic_total
-
-                            if steps:
-                                #min_ida_heuristic_total_steps = [step1, step2] + steps
-                                min_ida_heuristic_total_steps = [step1, step2, step3] + steps
-                            else:
-                                #min_ida_heuristic_total_steps = [step1, step2]
-                                min_ida_heuristic_total_steps = [step1, step2, step3]
-
-                        count += 1
-
-                else:
-                    raise Exception("max_depth is %s, it must be 2 or 3" % max_depth)
-
-        log.info("count %d, min_ida_heuristic_total %s, min_ida_heuristic_total_steps %s" % (count, min_ida_heuristic_total, ' '.join(min_ida_heuristic_total_steps)))
-        return (min_ida_heuristic_total, min_ida_heuristic_total_steps)
-
     def dwalton_solve(self):
         """
         """
@@ -1063,27 +968,41 @@ class LookupTableIDA(LookupTable):
         self.original_state = self.parent.state[:]
         self.original_solution = self.parent.solution[:]
 
-        cost_to_goal = self.ida_heuristic_total()
+        # dwalton here now
+        # Perform a BFS 4-steps deep and find the move sequence that gives us the highest center_pairs_count()
         workq = deque()
-        workq.append((0, cost_to_goal, []))
-        start_time0 = dt.datetime.now()
+        workq.append([])
+        workq_count = 0
+        max_center_pairs_count = self.parent.center_pairs_count()
+        #max_center_in_place_count = self.parent.center_in_place_count()
+        max_center_stage_count = self.parent.center_stage_count()
+        max_center_pairs_count_steps = None
+        explored = set()
 
-        # Perform a BFS until we find a sequence of moves that takes us to a
-        # state that IS in the lookup table.
-        while True:
+        log.warning("init max_center_pairs_count %d" % max_center_pairs_count)
+        #log.warning("init max_center_in_place_count %d" % max_center_in_place_count)
+        log.warning("init max_center_stage_count %d" % max_center_stage_count)
 
-            # Apply the steps for this workq entry
+        while workq:
+            workq_count += 1
+
+            # Put cube in baseline state
             self.parent.state = self.original_state[:]
             self.parent.solution = self.original_solution[:]
 
-            (cost_to_here, cost_to_goal, workq_steps) = workq.popleft()
+            workq_steps = workq.popleft()
             prev_step = None
-            log.info("workq_steps %s" % ' '.join(workq_steps))
 
+            # Apply the steps for this workq entry
             for step in workq_steps:
                 self.parent.rotate(step)
                 prev_step = step
 
+            '''
+            # The odds of this happening are very very low and it comes at the cost of
+            # searching the lookup table to see if we have steps for the current state.
+            # The amount of disk IO involved with doing this check vs how often it will
+            # find a match makes this not worth it.
             state = self.state()
             steps = self.steps(state)
 
@@ -1101,68 +1020,74 @@ class LookupTableIDA(LookupTable):
                 # LookupTabele's solve() to take us the rest of the way to the target state.
                 LookupTable.solve(self)
                 return True
+            '''
 
-            # save cube state
-            tmp_state = self.parent.state[:]
-            tmp_solution = self.parent.solution[:]
+            state = self.state()
+            if state in explored:
+                continue
+            else:
+                explored.add(state)
 
-            steps = None
-            step_result = []
+            center_pairs_count = self.parent.center_pairs_count()
+            #center_in_place_count = self.parent.center_in_place_count()
+            center_stage_count = self.parent.center_stage_count()
 
-            # dwalton here now
-            # We must decide what move to make to hopefully advance the
-            # cube towards our goal state.
-            for step in self.moves_all:
+            '''
+2018-06-02 11:48:43,183   LookupTable.py  WARNING: init max_center_pairs_count 1
+2018-06-02 11:48:43,183   LookupTable.py  WARNING: max_center_pairs_count 2, max_center_pairs_count_steps Uw', workq depth 118
+2018-06-02 11:48:43,184   LookupTable.py  WARNING: max_center_pairs_count 3, max_center_pairs_count_steps Fw', workq depth 325
+2018-06-02 11:48:43,193   LookupTable.py  WARNING: max_center_pairs_count 4, max_center_pairs_count_steps Uw Rw2, workq depth 2694
+2018-06-02 11:48:43,217   LookupTable.py  WARNING: max_center_pairs_count 5, max_center_pairs_count_steps Fw' Uw2, workq depth 7938
+2018-06-02 11:48:43,273   LookupTable.py  WARNING: max_center_pairs_count 6, max_center_pairs_count_steps U Fw Uw, workq depth 20588
+2018-06-02 11:48:45,681   LookupTable.py  WARNING: max_center_pairs_count 8, max_center_pairs_count_steps U Fw Uw Fw', workq depth 367981
+            '''
+            if center_pairs_count > max_center_pairs_count:
+                max_center_pairs_count = center_pairs_count
+                #max_center_in_place_count = center_in_place_count
+                max_center_stage_count = center_stage_count
+                max_center_pairs_count_steps = workq_steps[:]
+                log.warning("max_center_pairs_count %d, max_center_pairs_count_steps %s, workq depth %d" %
+                    (max_center_pairs_count, ' '.join(max_center_pairs_count_steps), len(workq)))
 
-                if steps_on_same_face_and_layer(prev_step, step):
-                    continue
-
-                self.parent.state = tmp_state[:]
-                self.parent.solution = tmp_solution[:]
-                self.parent.rotate(step)
-
-                max_depth = 2
-                (min_heuristic_total, min_heuristic_total_steps) = self.get_min_heuristic_total(step, self.parent.state[:], self.parent.solution[:], max_depth)
-
-                if min_heuristic_total == 0:
-                    self.parent.state = tmp_state[:]
-                    self.parent.solution = tmp_solution[:]
-                    self.parent.rotate(step)
-
-                    for step in min_heuristic_total_steps:
-                        self.parent.rotate(step)
-
-                    #self.parent.print_cube()
-                    log.warning("FOUND SOLUTION")
-                    return True
-
+            elif center_pairs_count == max_center_pairs_count:
+                '''
+                if center_in_place_count > max_center_in_place_count:
+                    max_center_pairs_count = center_pairs_count
+                    max_center_in_place_count = center_in_place_count
+                    max_center_pairs_count_steps = workq_steps[:]
+                    log.warning("TIE BREAK max_center_pairs_count %d, max_center_in_place_count %d" % (max_center_pairs_count, max_center_in_place_count))
                 else:
-                    step_result.append((min_heuristic_total, step))
+                    log.warning("TIE max_center_pairs_count %d, max_center_in_place_count %d" % (max_center_pairs_count, max_center_in_place_count))
+                '''
 
-            #log.info("step_result:\n%s\n" % pformat(step_result))
-            step_result = sorted(step_result)
-            log.info("step_result:\n%s\n" % pformat(step_result))
-            #sys.exit(0)
+                if center_stage_count > max_center_stage_count:
+                    max_center_pairs_count = center_pairs_count
+                    max_center_stage_count = center_stage_count
+                    max_center_pairs_count_steps = workq_steps[:]
+                    log.warning("TIE BREAK max_center_pairs_count %d, max_center_stage_count %d" % (max_center_pairs_count, max_center_stage_count))
+                else:
+                    log.warning("TIE max_center_pairs_count %d, max_center_stage_count %d" % (max_center_pairs_count, max_center_stage_count))
 
-            best_cost_to_goal = None
+                #log.warning("TIE max_center_pairs_count %d" % max_center_pairs_count)
 
-            for (cost_to_goal, step) in step_result:
-                if best_cost_to_goal is None:
-                    best_cost_to_goal = cost_to_goal
+            if len(workq_steps) <= 2:
+                for step in self.moves_all:
+                    if steps_on_same_face_and_layer(prev_step, step):
+                        continue
 
-                if cost_to_goal > best_cost_to_goal:
-                    break
+                    steps = workq_steps + [step,]
+                    workq.append(steps)
 
-                steps = workq_steps + [step,]
-                cost_to_here = len(steps)
-                workq.append((cost_to_here, cost_to_goal, steps))
+        # Put cube in baseline state
+        self.parent.state = self.original_state[:]
+        self.parent.solution = self.original_solution[:]
 
-            workq = deque(sorted(workq))
-            log.info("workq: %s" % pformat(workq))
-            log.info("\n\n")
-            #sys.exit(0)
+        # Apply the steps that give us the most center pairs
+        for step in max_center_pairs_count_steps:
+            self.parent.rotate(step)
 
-        raise SolveError("Could not find solution")
+        log.warning("max_center_pairs_count %d, max_center_pairs_count_steps %s, workq depth %d, workq_count %d" %
+            (max_center_pairs_count, ' '.join(max_center_pairs_count_steps), len(workq), workq_count))
 
     def solve(self, min_ida_threshold=None, max_ida_threshold=99):
         """

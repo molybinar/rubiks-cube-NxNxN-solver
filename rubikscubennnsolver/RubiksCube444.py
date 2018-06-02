@@ -747,29 +747,27 @@ class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
     """
     lookup-table-4x4x4-step200-ULFRBD-centers-solve-unstaged.txt
     ============================================================
-    1 steps has 19 entries (0 percent, 0.00x previous step)
-    2 steps has 459 entries (0 percent, 24.16x previous step)
-    3 steps has 10272 entries (0 percent, 22.38x previous step)
-    4 steps has 218195 entries (0 percent, 21.24x previous step)
-    5 steps has 4384602 entries (4 percent, 20.09x previous step)
-    6 steps has 83113883 entries (94 percent, 18.96x previous step)
+    1 steps has 10 entries (0 percent, 0.00x previous step)
+    2 steps has 162 entries (0 percent, 16.20x previous step)
+    3 steps has 2427 entries (0 percent, 14.98x previous step)
+    4 steps has 35830 entries (0 percent, 14.76x previous step)
+    5 steps has 527561 entries (0 percent, 14.72x previous step)
+    6 steps has 7683218 entries (6 percent, 14.56x previous step)
+    7 steps has 111158950 entries (93 percent, 14.47x previous step)
 
-    Total: 87727430 entries
-    Average: 5.944673 moves
-
+    Total: 119408158 entries
 
     24!/(4!*4!*4!*4!*4!*4!) is 3,246,670,537,000,000
-    If the number of entries expands by 18.96 each time (it won't
+    If the number of entries expands by 14.47 each time (it won't
     but this gives us a rough guess of the distribution) we are
     looking at:
 
-    7 steps 1,575,839,221 (1,663,566,651 total)
-    8 steps 29,877,911,630 (31,541,478,281 total)
-    9 steps 566,485,204,504 (598,026,682,785 total)
-    10 steps 10,740,559,480,000 (11,338,586,160,000 total)
-    11 steps 203,641,007,700,000 (214,381,567,200,000 total)
-    12 steps 3,861,033,506,000,000
-
+    7 steps
+    8 steps
+    9 steps
+    10 steps
+    11 steps
+    12 steps
     """
 
     def __init__(self, parent):
@@ -780,19 +778,17 @@ class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
             'lookup-table-4x4x4-step200-ULFRBD-centers-solve-unstaged.txt',
             'UUUULLLLFFFFRRRRBBBBDDDD',
             moves_4x4x4,
-            (), # illegal moves
 
-            # dwalton
             # illegal_moves...ignoring these increases the average solution
             # by less than 1 move but makes the IDA search about 20x faster
-            #("Lw", "Lw'", "Lw2",
-            # "Bw", "Bw'", "Bw2",
-            # "Dw", "Dw'", "Dw2"),
+            ("Lw", "Lw'", "Lw2",
+             "Bw", "Bw'", "Bw2",
+             "Dw", "Dw'", "Dw2"),
 
             # prune tables
             (parent.lt_UD_centers_solve_unstaged,
-             parent.lt_LR_centers_solve_unstaged,
-             parent.lt_FB_centers_solve_unstaged,
+             #parent.lt_LR_centers_solve_unstaged,
+             #parent.lt_FB_centers_solve_unstaged,
              #parent.lt_UF_centers_solve_unstaged,
              #parent.lt_UL_centers_solve_unstaged,
              #parent.lt_UR_centers_solve_unstaged,
@@ -809,8 +805,8 @@ class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
              #parent.lt_BD_centers_solve_unstaged,
             ),
 
-            linecount=87727430,
-            max_depth=6)
+            linecount=119408158,
+            max_depth=7)
 
     def state(self):
         parent_state = self.parent.state
@@ -1231,8 +1227,8 @@ class RubiksCube444(RubiksCube):
 
         # experiment
         self.lt_UD_centers_solve_unstaged = LookupTable444UDCentersSolveUnstaged(self)
-        self.lt_LR_centers_solve_unstaged = LookupTable444LRCentersSolveUnstaged(self)
-        self.lt_FB_centers_solve_unstaged = LookupTable444FBCentersSolveUnstaged(self)
+        #self.lt_LR_centers_solve_unstaged = LookupTable444LRCentersSolveUnstaged(self)
+        #self.lt_FB_centers_solve_unstaged = LookupTable444FBCentersSolveUnstaged(self)
 
         # build these prune tables via the UF table
         # - UL, UF, UR, UB
@@ -1240,6 +1236,7 @@ class RubiksCube444(RubiksCube):
         # - FR, FD
         # - RB, RD
         # - BD
+        '''
         self.lt_UF_centers_solve_unstaged = LookupTable444UFCentersSolveUnstaged(self)
         self.lt_UL_centers_solve_unstaged = LookupTable444ULCentersSolveUnstaged(self)
         self.lt_UR_centers_solve_unstaged = LookupTable444URCentersSolveUnstaged(self)
@@ -1256,7 +1253,7 @@ class RubiksCube444(RubiksCube):
         self.lt_RD_centers_solve_unstaged = LookupTable444RDCentersSolveUnstaged(self)
 
         self.lt_BD_centers_solve_unstaged = LookupTable444BDCentersSolveUnstaged(self)
-
+        '''
 
         self.lt_ULFRBD_centers_solve_unstaged = LookupTableIDA444ULFRBDCentersSolveUnstaged(self)
         #self.lt_ULFRBD_centers_solve_unstaged.avoid_oll = True
@@ -1293,15 +1290,16 @@ class RubiksCube444(RubiksCube):
         if self.centers_solved():
             return
 
-        # dwalton
-        '''
         log.info("%s: Start of Phase1" % self)
-        #self.lt_ULFRBD_centers_solve_unstaged.ida_all_the_way = True
-        self.lt_ULFRBD_centers_solve_unstaged.dwalton_solve()
+        #self.lt_ULFRBD_centers_solve_unstaged.dwalton_solve()
+        #self.print_cube()
+        #log.info("%s: middle of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
+        #sys.exit(0)
+
+        self.lt_ULFRBD_centers_solve_unstaged.solve()
         self.print_cube()
         log.info("%s: End of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         sys.exit(0)
-        '''
 
         # Stage all centers then solve all centers...averages 18.12 moves
         log.info("%s: Start of Phase1" % self)
@@ -1606,51 +1604,31 @@ class RubiksCube444(RubiksCube):
         log.info("%s: edges paired, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         self.solution.append('EDGES_GROUPED')
 
-    def center_out_of_place_count(self):
-        result = 0
-
-        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
-            for square_index in side.center_pos:
-                if self.state[square_index] != 'x' and self.state[square_index] != side.name:
-                    result += 1
-
-        return result
-
     def center_pairs_count(self):
         result = 0
 
-        for (x, y) in (
-            (6, 7),
-            (10, 11),
-            (6, 10),
-            (7, 11),
+        for (a, b, c, d) in (
+            (6, 7, 10, 11),
+            (22, 23, 26, 27),
+            (38, 39, 42, 43),
+            (54, 55, 58, 59),
+            (70, 71, 74, 75),
+            (86, 87, 90, 91)):
 
-            (22, 23),
-            (26, 27),
-            (22, 26),
-            (23, 27),
+            # 2 rows
+            if self.state[a] == self.state[b] and self.state[c] == self.state[d]:
+                result += 2
 
-            (38, 39),
-            (42, 43),
-            (38, 42),
-            (39, 43),
+            # 2 cols
+            elif self.state[a] == self.state[c] and self.state[b] == self.state[d]:
+                result += 2
 
-            (54, 55),
-            (58, 59),
-            (54, 58),
-            (55, 59),
+            # 1 row
+            elif self.state[a] == self.state[b] or self.state[c] == self.state[d]:
+                result += 1
 
-            (70, 71),
-            (74, 75),
-            (70, 74),
-            (71, 75),
-
-            (86, 87),
-            (90, 91),
-            (86, 90),
-            (87, 91)):
-
-            if self.state[x] == self.state[y] and self.state[x] != 'x':
+            # 1 col
+            elif self.state[a] == self.state[c] or self.state[b] == self.state[d]:
                 result += 1
 
         return result

@@ -4363,3 +4363,46 @@ div#page_holder {
                     result += 1
 
         return result
+
+    def center_out_of_place_count(self):
+        result = 0
+
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for square_index in side.center_pos:
+                if self.state[square_index] != 'x' and self.state[square_index] != side.name:
+                    result += 1
+
+        return result
+
+    def center_in_place_count(self):
+        result = 0
+
+        for side in (self.sideU, self.sideL, self.sideF, self.sideR, self.sideB, self.sideD):
+            for square_index in side.center_pos:
+                if self.state[square_index] == side.name:
+                    result += 1
+
+        return result
+
+    def center_stage_count(self):
+        result = 0
+        UD = ('U', 'D')
+        LR = ('L', 'R')
+        FB = ('F', 'B')
+
+        for side in (self.sideU, self.sideD):
+            for square_index in side.center_pos:
+                if self.state[square_index] in UD:
+                    result += 1
+
+        for side in (self.sideL, self.sideR):
+            for square_index in side.center_pos:
+                if self.state[square_index] in LR:
+                    result += 1
+
+        for side in (self.sideF, self.sideB):
+            for square_index in side.center_pos:
+                if self.state[square_index] in FB:
+                    result += 1
+
+        return result
