@@ -974,13 +974,11 @@ class LookupTableIDA(LookupTable):
         workq.append([])
         workq_count = 0
         max_center_pairs_count = self.parent.center_pairs_count()
-        #max_center_in_place_count = self.parent.center_in_place_count()
         max_center_stage_count = self.parent.center_stage_count()
         max_center_pairs_count_steps = None
         explored = set()
 
         log.warning("init max_center_pairs_count %d" % max_center_pairs_count)
-        #log.warning("init max_center_in_place_count %d" % max_center_in_place_count)
         log.warning("init max_center_stage_count %d" % max_center_stage_count)
 
         while workq:
@@ -1029,37 +1027,20 @@ class LookupTableIDA(LookupTable):
                 explored.add(state)
 
             center_pairs_count = self.parent.center_pairs_count()
-            #center_in_place_count = self.parent.center_in_place_count()
             center_stage_count = self.parent.center_stage_count()
 
-            '''
-2018-06-02 11:48:43,183   LookupTable.py  WARNING: init max_center_pairs_count 1
-2018-06-02 11:48:43,183   LookupTable.py  WARNING: max_center_pairs_count 2, max_center_pairs_count_steps Uw', workq depth 118
-2018-06-02 11:48:43,184   LookupTable.py  WARNING: max_center_pairs_count 3, max_center_pairs_count_steps Fw', workq depth 325
-2018-06-02 11:48:43,193   LookupTable.py  WARNING: max_center_pairs_count 4, max_center_pairs_count_steps Uw Rw2, workq depth 2694
-2018-06-02 11:48:43,217   LookupTable.py  WARNING: max_center_pairs_count 5, max_center_pairs_count_steps Fw' Uw2, workq depth 7938
-2018-06-02 11:48:43,273   LookupTable.py  WARNING: max_center_pairs_count 6, max_center_pairs_count_steps U Fw Uw, workq depth 20588
-2018-06-02 11:48:45,681   LookupTable.py  WARNING: max_center_pairs_count 8, max_center_pairs_count_steps U Fw Uw Fw', workq depth 367981
-            '''
             if center_pairs_count > max_center_pairs_count:
                 max_center_pairs_count = center_pairs_count
-                #max_center_in_place_count = center_in_place_count
                 max_center_stage_count = center_stage_count
                 max_center_pairs_count_steps = workq_steps[:]
                 log.warning("max_center_pairs_count %d, max_center_pairs_count_steps %s, workq depth %d" %
                     (max_center_pairs_count, ' '.join(max_center_pairs_count_steps), len(workq)))
 
-            elif center_pairs_count == max_center_pairs_count:
-                '''
-                if center_in_place_count > max_center_in_place_count:
-                    max_center_pairs_count = center_pairs_count
-                    max_center_in_place_count = center_in_place_count
-                    max_center_pairs_count_steps = workq_steps[:]
-                    log.warning("TIE BREAK max_center_pairs_count %d, max_center_in_place_count %d" % (max_center_pairs_count, max_center_in_place_count))
-                else:
-                    log.warning("TIE max_center_pairs_count %d, max_center_in_place_count %d" % (max_center_pairs_count, max_center_in_place_count))
-                '''
+                # This is about as good as we can hope for
+                if max_center_pairs_count >= 8:
+                    break
 
+            elif center_pairs_count == max_center_pairs_count:
                 if center_stage_count > max_center_stage_count:
                     max_center_pairs_count = center_pairs_count
                     max_center_stage_count = center_stage_count
@@ -1070,7 +1051,7 @@ class LookupTableIDA(LookupTable):
 
                 #log.warning("TIE max_center_pairs_count %d" % max_center_pairs_count)
 
-            if len(workq_steps) <= 2:
+            if len(workq_steps) <= 3:
                 for step in self.moves_all:
                     if steps_on_same_face_and_layer(prev_step, step):
                         continue

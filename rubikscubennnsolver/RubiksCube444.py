@@ -339,26 +339,24 @@ class LookupTableIDA444ULFRBDCentersStage(LookupTableIDA):
         return result
 
 
-"""
-lookup-table-4x4x4-step201-UD-centers-solve-unstaged.txt
-lookup-table-4x4x4-step202-LR-centers-solve-unstaged.txt
-lookup-table-4x4x4-step203-FB-centers-solve-unstaged.txt
-========================================================
-1 steps has 13 entries (0 percent, 0.00x previous step)
-2 steps has 205 entries (0 percent, 15.77x previous step)
-3 steps has 3526 entries (0 percent, 17.20x previous step)
-4 steps has 53778 entries (0 percent, 15.25x previous step)
-5 steps has 691972 entries (1 percent, 12.87x previous step)
-6 steps has 6685690 entries (12 percent, 9.66x previous step)
-7 steps has 28771914 entries (55 percent, 4.30x previous step)
-8 steps has 15187532 entries (29 percent, 0.53x previous step)
-9 steps has 88340 entries (0 percent, 0.01x previous step)
-
-Total: 51482970 entries
-Average: 7.138260 moves
-"""
 class LookupTable444UDCentersSolveUnstaged(LookupTable):
+    """
+    lookup-table-4x4x4-step201-UD-centers-solve-unstaged.txt
+    ========================================================
+    1 steps has 7 entries (0 percent, 0.00x previous step)
+    2 steps has 84 entries (0 percent, 12.00x previous step)
+    3 steps has 1118 entries (0 percent, 13.31x previous step)
+    4 steps has 14208 entries (0 percent, 12.71x previous step)
+    5 steps has 163085 entries (0 percent, 11.48x previous step)
+    6 steps has 1586257 entries (3 percent, 9.73x previous step)
+    7 steps has 10286840 entries (19 percent, 6.48x previous step)
+    8 steps has 26985405 entries (52 percent, 2.62x previous step)
+    9 steps has 12258437 entries (23 percent, 0.45x previous step)
+    10 steps has 187529 entries (0 percent, 0.02x previous step)
 
+    Total: 51482970 entries
+    Average: 7.973232 moves
+    """
     def __init__(self, parent):
 
         LookupTable.__init__(
@@ -367,7 +365,10 @@ class LookupTable444UDCentersSolveUnstaged(LookupTable):
             'lookup-table-4x4x4-step201-UD-centers-solve-unstaged.txt',
             'UUUUxxxxxxxxxxxxxxxxDDDD',
             linecount=51482970,
-            max_depth=9)
+            max_depth=10)
+
+    def __str__(self):
+        return self.__class__.__name__
 
     def state(self):
         parent_state = self.parent.state
@@ -375,37 +376,65 @@ class LookupTable444UDCentersSolveUnstaged(LookupTable):
         return result
 
 
-class LookupTable444LRCentersSolveUnstaged(LookupTable):
-
-    def __init__(self, parent):
-        LookupTable.__init__(
-            self,
-            parent,
-            'lookup-table-4x4x4-step202-LR-centers-solve-unstaged.txt',
-            'xxxxLLLLxxxxRRRRxxxxxxxx',
-            linecount=51482970,
-            max_depth=9)
+class LookupTable444LRCentersSolveUnstaged(LookupTable444UDCentersSolveUnstaged):
 
     def state(self):
+        """
+        - rotate cube y'
+        - rotate cube x
+        - x out everything but L and R
+        - change Ls to Us
+        - change Rs to Ds
+        """
+        tmp_state = self.parent.state[:]
+        tmp_solution = self.parent.solution[:]
+
+        self.parent.rotate("y'")
+        self.parent.rotate("x")
         parent_state = self.parent.state
-        result = ''.join([parent_state[x] if parent_state[x] in ('L', 'R') else 'x' for x in centers_444])
+        result = []
+
+        for square_index in centers_444:
+            if parent_state[square_index] == 'L':
+                result.append('U')
+            elif parent_state[square_index] == 'R':
+                result.append('D')
+            else:
+                result.append('x')
+
+        result = ''.join(result)
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
         return result
 
 
-class LookupTable444FBCentersSolveUnstaged(LookupTable):
-
-    def __init__(self, parent):
-        LookupTable.__init__(
-            self,
-            parent,
-            'lookup-table-4x4x4-step203-FB-centers-solve-unstaged.txt',
-            'xxxxxxFFFFxxxxBBBBxxxxxx',
-            linecount=51482970,
-            max_depth=9)
+class LookupTable444FBCentersSolveUnstaged(LookupTable444UDCentersSolveUnstaged):
 
     def state(self):
+        """
+        - rotate cube x
+        - x out everything but F and B
+        - change Fs to Us
+        - change Bs to Ds
+        """
+        tmp_state = self.parent.state[:]
+        tmp_solution = self.parent.solution[:]
+
+        self.parent.rotate("x")
         parent_state = self.parent.state
-        result = ''.join([parent_state[x] if parent_state[x] in ('F', 'B') else 'x' for x in centers_444])
+        result = []
+
+        for square_index in centers_444:
+            if parent_state[square_index] == 'F':
+                result.append('U')
+            elif parent_state[square_index] == 'B':
+                result.append('D')
+            else:
+                result.append('x')
+
+        result = ''.join(result)
+        self.parent.state = tmp_state[:]
+        self.parent.solution = tmp_solution[:]
         return result
 
 
@@ -437,23 +466,6 @@ class LookupTable444UFCentersSolveUnstaged(LookupTable):
 
     def __str__(self):
         return self.__class__.__name__
-
-    def steps_cost(self, state_to_find=None):
-
-        if state_to_find is None:
-            state_to_find = self.state()
-
-        steps = self.steps(state_to_find)
-
-        if steps is None:
-            #log.info("%s: steps_cost None for %s (stage_target)" % (self, state_to_find))
-            return 0
-        else:
-            if steps[0].isdigit():
-                return int(steps[0])
-            else:
-                #log.info("%s: steps_cost %d for %s (%s)" % (self, len(steps), state_to_find, ' '.join(steps)))
-                return self.parent.get_solution_len_minus_rotates(steps)
 
     def state(self):
         parent_state = self.parent.state
@@ -749,27 +761,30 @@ class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
     ============================================================
     1 steps has 10 entries (0 percent, 0.00x previous step)
     2 steps has 162 entries (0 percent, 16.20x previous step)
-    3 steps has 2427 entries (0 percent, 14.98x previous step)
-    4 steps has 35830 entries (0 percent, 14.76x previous step)
-    5 steps has 527561 entries (0 percent, 14.72x previous step)
-    6 steps has 7683218 entries (6 percent, 14.56x previous step)
-    7 steps has 111158950 entries (93 percent, 14.47x previous step)
+    3 steps has 2,427 entries (0 percent, 14.98x previous step)
+    4 steps has 35,830 entries (0 percent, 14.76x previous step)
+    5 steps has 527,561 entries (0 percent, 14.72x previous step)
+    6 steps has 7,683,218 entries (6 percent, 14.56x previous step)
+    7 steps has 111,158,950 entries (93 percent, 14.47x previous step)
 
-    Total: 119408158 entries
+    Total: 119,408,158 entries
 
     24!/(4!*4!*4!*4!*4!*4!) is 3,246,670,537,000,000
     If the number of entries expands by 14.47 each time (it won't
     but this gives us a rough guess of the distribution) we are
     looking at:
 
-    7 steps
-    8 steps
-    9 steps
-    10 steps
-    11 steps
-    12 steps
-    """
+    8 steps 1,608,470,006 (total 1,727,878,164)
+    9 steps 23,274,560,986 (total 25,002,439,150)
+    10 steps 336,782,897,467 (total 361,785,336,617)
+    11 steps 4,873,248,526,347 (total 5,235,033,862,964)
+    12 steps 70,515,906,176,241 (total 75,750,940,039,205)
+    13 steps 1,020,365,162,370,207 (total 1,096,116,102,409,412)
+    14 steps This would put us over 3,246,670,537,000,000
 
+    So an educated guess is that there would be a huge percentage of states
+    at 14 steps, I am sure there would be some that were longer than that.
+    """
     def __init__(self, parent):
 
         LookupTableIDA.__init__(
@@ -785,10 +800,11 @@ class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
              "Bw", "Bw'", "Bw2",
              "Dw", "Dw'", "Dw2"),
 
+            # dwalton
             # prune tables
             (parent.lt_UD_centers_solve_unstaged,
-             #parent.lt_LR_centers_solve_unstaged,
-             #parent.lt_FB_centers_solve_unstaged,
+             parent.lt_LR_centers_solve_unstaged,
+             parent.lt_FB_centers_solve_unstaged,
              #parent.lt_UF_centers_solve_unstaged,
              #parent.lt_UL_centers_solve_unstaged,
              #parent.lt_UR_centers_solve_unstaged,
@@ -812,90 +828,6 @@ class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
         parent_state = self.parent.state
         result = ''.join([parent_state[x] for x in centers_444])
         return result
-
-        '''
-    def ida_heuristic(self):
-        UD_cost = self.parent.lt_UD_centers_solve_unstaged.steps_cost()
-        #if UD_cost >= 8:
-        #    return UD_cost
-
-        LR_cost = self.parent.lt_LR_centers_solve_unstaged.steps_cost()
-        #if LR_cost >= 8:
-        #    return LR_cost
-
-        FB_cost = self.parent.lt_FB_centers_solve_unstaged.steps_cost()
-        #if FB_cost >= 8:
-        #    return FB_cost
-
-        UF_cost = self.parent.lt_UF_centers_solve_unstaged.steps_cost()
-        #if UF_cost >= 8:
-        #    return UF_cost
-
-        UL_cost = self.parent.lt_UL_centers_solve_unstaged.steps_cost()
-        #if UL_cost >= 8:
-        #    return UL_cost
-
-        UR_cost = self.parent.lt_UR_centers_solve_unstaged.steps_cost()
-        #if UR_cost >= 8:
-        #    return UR_cost
-
-        UB_cost = self.parent.lt_UB_centers_solve_unstaged.steps_cost()
-        #if UB_cost >= 8:
-        #    return UB_cost
-
-        LF_cost = self.parent.lt_LF_centers_solve_unstaged.steps_cost()
-        #if LF_cost >= 8:
-        #    return LF_cost
-
-        LB_cost = self.parent.lt_LB_centers_solve_unstaged.steps_cost()
-        #if LB_cost >= 8:
-        #    return LB_cost
-
-        LD_cost = self.parent.lt_LD_centers_solve_unstaged.steps_cost()
-        #if LD_cost >= 8:
-        #    return LD_cost
-
-        FR_cost = self.parent.lt_FR_centers_solve_unstaged.steps_cost()
-        #if FR_cost >= 8:
-        #    return FR_cost
-
-        FD_cost = self.parent.lt_FD_centers_solve_unstaged.steps_cost()
-        #if FD_cost >= 8:
-        #    return FD_cost
-
-        RB_cost = self.parent.lt_RB_centers_solve_unstaged.steps_cost()
-        #if RB_cost >= 8:
-        #    return RB_cost
-
-        RD_cost = self.parent.lt_RD_centers_solve_unstaged.steps_cost()
-        #if RD_cost >= 8:
-        #    return RD_cost
-
-        BD_cost = self.parent.lt_BD_centers_solve_unstaged.steps_cost()
-        #if BD_cost >= 8:
-        #    return BD_cost
-
-        out_of_place_count = self.parent.center_out_of_place_count()
-        out_of_place_cost = out_of_place_count / 8
-
-        center_pairs_count = self.parent.center_pairs_count()
-        center_unpaired_count = 24 - center_pairs_count
-        center_unpaired_cost = center_unpaired_count / 8
-
-        inputs = (UD_cost, LR_cost, FB_cost,
-                  UF_cost, UL_cost, UR_cost, UB_cost,
-                  LF_cost, LB_cost, LD_cost,
-                  FR_cost, FD_cost,
-                  RB_cost, RD_cost,
-                  BD_cost,
-                  out_of_place_cost, center_unpaired_cost)
-        result = max(inputs)
-
-        #self.parent.print_cube()
-        #log.info("%s: inputs %s, result %s" % (self, pformat(inputs), result))
-        #sys.exit(0)
-        return result
-        '''
 
 
 class LookupTable444ULFRBDCentersSolve(LookupTable):
@@ -1227,8 +1159,8 @@ class RubiksCube444(RubiksCube):
 
         # experiment
         self.lt_UD_centers_solve_unstaged = LookupTable444UDCentersSolveUnstaged(self)
-        #self.lt_LR_centers_solve_unstaged = LookupTable444LRCentersSolveUnstaged(self)
-        #self.lt_FB_centers_solve_unstaged = LookupTable444FBCentersSolveUnstaged(self)
+        self.lt_LR_centers_solve_unstaged = LookupTable444LRCentersSolveUnstaged(self)
+        self.lt_FB_centers_solve_unstaged = LookupTable444FBCentersSolveUnstaged(self)
 
         # build these prune tables via the UF table
         # - UL, UF, UR, UB
@@ -1291,16 +1223,18 @@ class RubiksCube444(RubiksCube):
             return
 
         log.info("%s: Start of Phase1" % self)
-        #self.lt_ULFRBD_centers_solve_unstaged.dwalton_solve()
-        #self.print_cube()
-        #log.info("%s: middle of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
-        #sys.exit(0)
+        self.lt_ULFRBD_centers_solve_unstaged.dwalton_solve()
+        self.rotate_for_best_centers_solving()
+        self.print_cube()
+        log.info("%s: middle of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
 
         self.lt_ULFRBD_centers_solve_unstaged.solve()
         self.print_cube()
         log.info("%s: End of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
+        # dwalton
         sys.exit(0)
 
+        '''
         # Stage all centers then solve all centers...averages 18.12 moves
         log.info("%s: Start of Phase1" % self)
         #self.lt_ULFRBD_centers_stage.ida_all_the_way = True
@@ -1311,9 +1245,6 @@ class RubiksCube444(RubiksCube):
         #self.print_solution()
         log.info("%s: End of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         log.info("")
-
-        # dwalton
-        sys.exit(0)
 
         # If the centers were already staged we may not be able to avoid OLL when solving the centers
         if self.get_solution_len_minus_rotates(self.solution) == 0:
@@ -1334,6 +1265,7 @@ class RubiksCube444(RubiksCube):
         self.print_cube()
         log.info("%s: End of Phase2, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
         log.info("")
+        '''
 
     def solve_all_edges_444(self, use_bfs, apply_steps_if_found):
 
