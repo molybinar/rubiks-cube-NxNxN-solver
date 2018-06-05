@@ -258,6 +258,8 @@ class LookupTable(object):
         self.avoid_oll = False
         self.avoid_pll = False
         self.preloaded_state_set = False
+        self.preloaded_cache = False
+        self.cache = {}
         self.ida_all_the_way = False
         self.use_lt_as_prune = False
         self.fh_txt_seek_calls = 0
@@ -327,6 +329,16 @@ class LookupTable(object):
 
         return None
 
+    def preload_cache(self):
+        log.info("%s: begin preload cache" % self)
+        self.fh_txt.seek(0)
+
+        for line in self.fh_txt:
+            (state, steps) = line.decode('utf-8').rstrip().split(':')
+            self.cache[state] = steps.split()
+
+        log.info("%s: end preload cache" % self)
+
     def steps(self, state_to_find=None):
         """
         Return a list of the steps found in the lookup table for the current cube state
@@ -338,14 +350,24 @@ class LookupTable(object):
         if state_to_find in self.state_target:
             return None
 
+        if self.preloaded_cache:
+            return self.cache[state_to_find]
+
+        # dwalton
+        steps_list = self.cache.get(state_to_find)
+        if steps_list:
+            return steps_list
+
         line = self.binary_search(state_to_find)
 
         if line:
             (state, steps) = line.strip().split(':')
             steps_list = steps.split()
+            self.cache[state_to_find] = steps_list
             return steps_list
 
         else:
+            self.cache[state_to_find] = None
             return None
 
     def steps_cost(self, state_to_find=None):
@@ -635,7 +657,7 @@ class LookupTableIDA(LookupTable):
 
         return total
 
-    def ida_heuristic(self):
+    def ida_heuristic(self, max_acceptable_cost_to_goal=None):
         cost_to_goal = 0
 
         if self.use_lt_as_prune:
@@ -653,6 +675,9 @@ class LookupTableIDA(LookupTable):
             else:
                 cost_to_goal = len(steps)
 
+            if max_acceptable_cost_to_goal is not None and cost_to_goal >= max_acceptable_cost_to_goal:
+                return cost_to_goal
+
         for pt in self.prune_tables:
 
             # If there is no way this pt will have a higher cost than the prune
@@ -665,6 +690,9 @@ class LookupTableIDA(LookupTable):
 
             if pt_cost_to_goal > cost_to_goal:
                 cost_to_goal = pt_cost_to_goal
+
+                if max_acceptable_cost_to_goal is not None and cost_to_goal >= max_acceptable_cost_to_goal:
+                    break
 
         return cost_to_goal
 
@@ -866,7 +894,8 @@ class LookupTableIDA(LookupTable):
 
         # calculate f_cost which is the cost to where we are plus the estimated cost to reach our goal
         cost_to_here = len(steps_to_here)
-        cost_to_goal = self.ida_heuristic()
+        max_acceptable_cost_to_goal = threshold - cost_to_here
+        cost_to_goal = self.ida_heuristic(max_acceptable_cost_to_goal)
         f_cost = cost_to_here + cost_to_goal
 
         # ================
@@ -877,6 +906,7 @@ class LookupTableIDA(LookupTable):
 
         lt_state = self.state()
 
+        # dwalton
         # If our cost_to_goal is greater than the max_depth of our main lookup table then there is no
         # need to do a binary search through the main lookup table to look for our current state...this
         # saves us some disk IO

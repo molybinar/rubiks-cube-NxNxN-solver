@@ -442,17 +442,19 @@ class LookupTable444UFCentersSolveUnstaged(LookupTable):
     """
     lookup-table-4x4x4-step204-UF-centers-solve-unstaged.txt
     ========================================================
-    1 steps has 19 entries (0 percent, 0.00x previous step)
-    2 steps has 355 entries (0 percent, 18.68x previous step)
-    3 steps has 6716 entries (0 percent, 18.92x previous step)
-    4 steps has 117206 entries (0 percent, 17.45x previous step)
-    5 steps has 1756793 entries (3 percent, 14.99x previous step)
-    6 steps has 17189829 entries (33 percent, 9.78x previous step)
-    7 steps has 31431550 entries (61 percent, 1.83x previous step)
-    8 steps has 980502 entries (1 percent, 0.03x previous step)
+    1 steps has 10 entries (0 percent, 0.00x previous step)
+    2 steps has 118 entries (0 percent, 11.80x previous step)
+    3 steps has 1,474 entries (0 percent, 12.49x previous step)
+    4 steps has 18,198 entries (0 percent, 12.35x previous step)
+    5 steps has 209,940 entries (0 percent, 11.54x previous step)
+    6 steps has 2,151,856 entries (4 percent, 10.25x previous step)
+    7 steps has 14,657,659 entries (28 percent, 6.81x previous step)
+    8 steps has 28,677,551 entries (55 percent, 1.96x previous step)
+    9 steps has 5,739,465 entries (11 percent, 0.20x previous step)
+    10 steps has 26,699 entries (0 percent, 0.00x previous step)
 
-    Total: 51482970 entries
-    Average: 6.609516 moves
+    Total: 51,482,970 entries
+    Average: 7.730411 moves
     """
 
     def __init__(self, parent):
@@ -462,7 +464,7 @@ class LookupTable444UFCentersSolveUnstaged(LookupTable):
             'lookup-table-4x4x4-step204-UF-centers-solve-unstaged.txt',
             'UUUUxxxxFFFFxxxxxxxxxxxx',
             linecount=51482970,
-            max_depth=8)
+            max_depth=10)
 
     def __str__(self):
         return self.__class__.__name__
@@ -800,25 +802,25 @@ class LookupTableIDA444ULFRBDCentersSolveUnstaged(LookupTableIDA):
              "Bw", "Bw'", "Bw2",
              "Dw", "Dw'", "Dw2"),
 
-            # dwalton
             # prune tables
             (parent.lt_UD_centers_solve_unstaged,
              parent.lt_LR_centers_solve_unstaged,
              parent.lt_FB_centers_solve_unstaged,
-             #parent.lt_UF_centers_solve_unstaged,
-             #parent.lt_UL_centers_solve_unstaged,
-             #parent.lt_UR_centers_solve_unstaged,
-             #parent.lt_UB_centers_solve_unstaged,
 
-             #parent.lt_LF_centers_solve_unstaged,
-             #parent.lt_LB_centers_solve_unstaged,
-             #parent.lt_LD_centers_solve_unstaged,
-             #parent.lt_FR_centers_solve_unstaged,
-             #parent.lt_FD_centers_solve_unstaged,
+             parent.lt_UF_centers_solve_unstaged,
+             parent.lt_UL_centers_solve_unstaged,
+             parent.lt_UR_centers_solve_unstaged,
+             parent.lt_UB_centers_solve_unstaged,
 
-             #parent.lt_RB_centers_solve_unstaged,
-             #parent.lt_RD_centers_solve_unstaged,
-             #parent.lt_BD_centers_solve_unstaged,
+             parent.lt_LF_centers_solve_unstaged,
+             parent.lt_LB_centers_solve_unstaged,
+             parent.lt_LD_centers_solve_unstaged,
+             parent.lt_FR_centers_solve_unstaged,
+             parent.lt_FD_centers_solve_unstaged,
+
+             parent.lt_RB_centers_solve_unstaged,
+             parent.lt_RD_centers_solve_unstaged,
+             parent.lt_BD_centers_solve_unstaged,
             ),
 
             linecount=119408158,
@@ -1168,7 +1170,6 @@ class RubiksCube444(RubiksCube):
         # - FR, FD
         # - RB, RD
         # - BD
-        '''
         self.lt_UF_centers_solve_unstaged = LookupTable444UFCentersSolveUnstaged(self)
         self.lt_UL_centers_solve_unstaged = LookupTable444ULCentersSolveUnstaged(self)
         self.lt_UR_centers_solve_unstaged = LookupTable444URCentersSolveUnstaged(self)
@@ -1185,8 +1186,14 @@ class RubiksCube444(RubiksCube):
         self.lt_RD_centers_solve_unstaged = LookupTable444RDCentersSolveUnstaged(self)
 
         self.lt_BD_centers_solve_unstaged = LookupTable444BDCentersSolveUnstaged(self)
-        '''
 
+        '''
+2018-06-02 22:25:05,277 RubiksCube444.py     INFO: 4x4x4: Start of Phase1
+2018-06-02 22:25:05,467   LookupTable.py     INFO: 4x4x4-step200-ULFRBD-centers-solve-unstaged: IDA threshold range 9->99
+2018-06-02 22:25:05,469   LookupTable.py     INFO: 4x4x4-step200-ULFRBD-centers-solve-unstaged: IDA threshold 9, explored 1 nodes, took 1ms
+2018-06-02 22:25:08,179   LookupTable.py     INFO: 4x4x4-step200-ULFRBD-centers-solve-unstaged: IDA threshold 10, explored 28 nodes, took 0:00:02.709954
+2018-06-02 22:26:20,372   LookupTable.py     INFO: 4x4x4-step200-ULFRBD-centers-solve-unstaged: IDA threshold 11, explored 930 nodes, took 0:01:12.193152
+        '''
         self.lt_ULFRBD_centers_solve_unstaged = LookupTableIDA444ULFRBDCentersSolveUnstaged(self)
         #self.lt_ULFRBD_centers_solve_unstaged.avoid_oll = True
 
@@ -1223,16 +1230,14 @@ class RubiksCube444(RubiksCube):
             return
 
         log.info("%s: Start of Phase1" % self)
-        self.lt_ULFRBD_centers_solve_unstaged.dwalton_solve()
-        self.rotate_for_best_centers_solving()
-        self.print_cube()
-        log.info("%s: middle of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
+        #self.lt_ULFRBD_centers_solve_unstaged.dwalton_solve()
+        #self.rotate_for_best_centers_solving()
+        #self.print_cube()
+        #log.info("%s: middle of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
 
         self.lt_ULFRBD_centers_solve_unstaged.solve()
         self.print_cube()
         log.info("%s: End of Phase1, %d steps in" % (self, self.get_solution_len_minus_rotates(self.solution)))
-        # dwalton
-        sys.exit(0)
 
         '''
         # Stage all centers then solve all centers...averages 18.12 moves

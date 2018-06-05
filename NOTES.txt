@@ -1,12 +1,4 @@
 
-baseline, only UD prune table
-=============================
-2018-06-02 18:48:52,624 RubiksCube444.py     INFO: 4x4x4: Start of Phase1
-2018-06-02 18:48:52,645   LookupTable.py     INFO: 4x4x4-step200-ULFRBD-centers-solve-unstaged: IDA threshold range 8->99
-2018-06-02 18:48:52,652   LookupTable.py     INFO: 4x4x4-step200-ULFRBD-centers-solve-unstaged: IDA threshold 8, explored 1 nodes, took 6ms
-2018-06-02 18:49:01,414   LookupTable.py     INFO: 4x4x4-step200-ULFRBD-centers-solve-unstaged: IDA threshold 9, explored 1138 nodes, took 0:00:08.761199
-2018-06-02 18:49:18,082   LookupTable.py     INFO: 4x4x4-step200-ULFRBD-centers-solve-unstaged: 7539 seek calls
-2018-06-02 18:49:18,082   LookupTable.py     INFO: 4x4x4-step201-UD-centers-solve-unstaged: 68399 seek calls
-2018-06-02 18:49:18,082   LookupTable.py     INFO: 4x4x4-step200-ULFRBD-centers-solve-unstaged: IDA found match 9 steps in Uw Fw2 Uw' Fw' Uw L2 B' Uw2 Rw', lt_state UUUURBLLBLBBFFRRFFRLDDDD, f_cost 9 (9 + 0)
-2018-06-02 18:49:18,082   LookupTable.py     INFO: 4x4x4-step200-ULFRBD-centers-solve-unstaged: IDA threshold 10, explored 2238 nodes, took 0:00:16.668183 (0:00:25.457950 total)
-2018-06-02 18:49:18,082   LookupTable.py     INFO: 4x4x4-step200-ULFRBD-centers-solve-unstaged: IDA explored 3377 nodes in 0:00:25.457950, 132 nodes-per-sec
+The 4x4x4 step200, step201 and step204 files have been updated...they are huge though
+and trying to solve centers without staging first just doesn't work well...the search
+takes hours.  I should probably just delete these.
